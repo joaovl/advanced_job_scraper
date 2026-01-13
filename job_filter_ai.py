@@ -413,7 +413,7 @@ def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None, parallel: 
     if not jobs_for_ai:
         print("No jobs passed quick filter.")
     elif parallel and len(jobs_for_ai) > 1:
-        # Parallel AI scoring
+        # Parallel AI scoring with clean output
         num_workers = workers or DEFAULT_WORKERS
         print(f"\nScoring {len(jobs_for_ai)} jobs with AI in PARALLEL ({num_workers} workers)...")
 
@@ -430,8 +430,8 @@ def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None, parallel: 
                 completed += 1
                 try:
                     idx, job, ai_result = future.result()
-                    title = job.get('title', 'Unknown')[:50]
-                    company = job.get('company', 'Unknown')[:20]
+                    title = job.get('title', 'Unknown')[:40]
+                    company = job.get('company', 'Unknown')[:15]
 
                     score = ai_result.get('score', 0)
                     is_match = ai_result.get('match', False) and score >= min_score
@@ -445,7 +445,7 @@ def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None, parallel: 
                             "reason": "; ".join(reasons[:2])
                         })
                         matched += 1
-                        print(f"[{completed}/{len(jobs_for_ai)}] MATCH: {title} @ {company} (score {score})")
+                        print(f"[{completed:3}/{len(jobs_for_ai)}] MATCH  {score:2} {company:15} {title}")
                     else:
                         results.append({
                             **job,
@@ -454,10 +454,11 @@ def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None, parallel: 
                             "reason": "; ".join(reasons[:2])
                         })
                         rejected_ai += 1
-                        print(f"[{completed}/{len(jobs_for_ai)}] REJECT: {title} @ {company} (score {score})")
+                        print(f"[{completed:3}/{len(jobs_for_ai)}] REJECT {score:2} {company:15} {title}")
 
                 except Exception as e:
                     idx, job = futures[future]
+                    title = job.get('title', 'Unknown')[:40]
                     results.append({
                         **job,
                         "decision": "REJECTED",
@@ -465,6 +466,7 @@ def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None, parallel: 
                         "reason": f"AI error: {e}"
                     })
                     rejected_ai += 1
+                    print(f"[{completed:3}/{len(jobs_for_ai)}] ERROR  -- {title[:50]}")
     else:
         # Sequential AI scoring
         for i, (idx, job) in enumerate(jobs_for_ai):

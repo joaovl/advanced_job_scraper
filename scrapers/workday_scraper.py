@@ -588,7 +588,7 @@ HEADERS = {
 }
 
 
-def fetch_jobs(company_key: str, config: dict, location_search: str = None, max_jobs: int = 500) -> list:
+def fetch_jobs(company_key: str, config: dict, location_search: str = None, max_jobs: int = 500, quiet: bool = False) -> list:
     """Fetch all jobs from a Workday company API."""
     jobs = []
     offset = 0
@@ -606,7 +606,8 @@ def fetch_jobs(company_key: str, config: dict, location_search: str = None, max_
     if config.get("location_filter"):
         payload["appliedFacets"]["locationCountry"] = config["location_filter"]
 
-    print(f"Fetching jobs from {config['name']}...")
+    if not quiet:
+        print(f"Fetching jobs from {config['name']}...")
 
     while offset < max_jobs:
         payload["offset"] = offset
@@ -645,7 +646,8 @@ def fetch_jobs(company_key: str, config: dict, location_search: str = None, max_
                     "job_category": job.get("jobCategory", ""),
                 })
 
-            print(f"  Fetched {len(jobs)}/{total} jobs...")
+            if not quiet:
+                print(f"  Fetched {len(jobs)}/{total} jobs...")
 
             if len(job_postings) < limit:
                 break
@@ -654,7 +656,8 @@ def fetch_jobs(company_key: str, config: dict, location_search: str = None, max_
             time.sleep(0.5)  # Rate limiting
 
         except requests.RequestException as e:
-            print(f"  Error fetching jobs: {e}")
+            if not quiet:
+                print(f"  Error fetching jobs: {e}")
             break
 
     return jobs
@@ -690,23 +693,26 @@ def fetch_job_details(company_key: str, config: dict, external_path: str) -> dic
         return {"description": "", "error": str(e)}
 
 
-def scrape_company(company_key: str, location_search: str = None, fetch_descriptions: bool = True) -> dict:
-    """Scrape all jobs for a company."""
+def scrape_company(company_key: str, location_search: str = None, fetch_descriptions: bool = True, quiet: bool = False) -> dict:
+    """Scrape all jobs for a company. Use quiet=True for parallel execution."""
     if company_key not in WORKDAY_COMPANIES:
-        print(f"Unknown company: {company_key}")
+        if not quiet:
+            print(f"Unknown company: {company_key}")
         return None
 
     config = WORKDAY_COMPANIES[company_key]
 
-    print("=" * 60)
-    print(f"{config['name'].upper()} JOB SCRAPER (Workday API)")
-    print("=" * 60)
+    if not quiet:
+        print("=" * 60)
+        print(f"{config['name'].upper()} JOB SCRAPER (Workday API)")
+        print("=" * 60)
 
     # Fetch job listings
-    jobs = fetch_jobs(company_key, config, location_search)
+    jobs = fetch_jobs(company_key, config, location_search, quiet=quiet)
 
     if not jobs:
-        print("No jobs found.")
+        if not quiet:
+            print("No jobs found.")
         return {
             "company": config["name"],
             "scraped_at": datetime.now().isoformat(),
@@ -715,7 +721,8 @@ def scrape_company(company_key: str, location_search: str = None, fetch_descript
             "jobs": []
         }
 
-    print(f"\nFound {len(jobs)} jobs")
+    if not quiet:
+        print(f"\nFound {len(jobs)} jobs")
 
     # Build full job URLs
     careers_base = config["careers_url"]
@@ -727,11 +734,13 @@ def scrape_company(company_key: str, location_search: str = None, fetch_descript
 
     # Fetch descriptions and additional details
     if fetch_descriptions:
-        print("\nFetching job descriptions and details...")
+        if not quiet:
+            print("\nFetching job descriptions and details...")
         desc_count = 0
         for i, job in enumerate(jobs):
             if job.get("external_path"):
-                print(f"  [{i+1}/{len(jobs)}] {job['title'][:50]}...")
+                if not quiet:
+                    print(f"  [{i+1}/{len(jobs)}] {job['title'][:50]}...")
                 details = fetch_job_details(company_key, config, job["external_path"])
                 if details.get("description"):
                     job["description"] = details["description"]
@@ -751,7 +760,8 @@ def scrape_company(company_key: str, location_search: str = None, fetch_descript
             else:
                 job["description"] = ""
 
-        print(f"\nFetched {desc_count}/{len(jobs)} descriptions")
+        if not quiet:
+            print(f"\nFetched {desc_count}/{len(jobs)} descriptions")
     else:
         for job in jobs:
             job["description"] = ""
@@ -862,12 +872,13 @@ def main():
         print("Use --list to see available companies")
         return
 
-    def process_company(company_key):
+    def process_company(company_key, quiet=False):
         """Process a single company and save results."""
         result = scrape_company(
             company_key,
             location_search=args.search,
-            fetch_descriptions=not args.no_desc
+            fetch_descriptions=not args.no_desc,
+            quiet=quiet
         )
 
         if result and result["total_jobs"] > 0:
@@ -877,36 +888,43 @@ def main():
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
 
-            return company_key, result["total_jobs"], output_file
-        return company_key, 0, None
+            return company_key, result["total_jobs"], result.get("jobs_with_description", 0), output_file
+        return company_key, 0, 0, None
 
     if args.parallel and len(companies_to_scrape) > 1:
-        # Parallel execution
+        # Parallel execution with clean output
         print(f"\nScraping {len(companies_to_scrape)} companies in PARALLEL ({args.workers} workers)...")
+        print("-" * 60)
         results_summary = []
+        completed = 0
 
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            futures = {executor.submit(process_company, key): key for key in companies_to_scrape}
+            futures = {executor.submit(process_company, key, quiet=True): key for key in companies_to_scrape}
 
             for future in as_completed(futures):
                 company_key = futures[future]
+                completed += 1
                 try:
-                    key, count, output_file = future.result()
-                    results_summary.append((key, count, output_file))
+                    key, count, desc_count, output_file = future.result()
+                    results_summary.append((key, count, desc_count, output_file))
+                    name = WORKDAY_COMPANIES[key]['name']
                     if count > 0:
-                        print(f"  {WORKDAY_COMPANIES[key]['name']}: {count} jobs")
+                        print(f"[{completed:3}/{len(companies_to_scrape)}] {name:30} {count:4} jobs ({desc_count} with desc)")
+                    else:
+                        print(f"[{completed:3}/{len(companies_to_scrape)}] {name:30}    0 jobs")
                 except Exception as e:
-                    print(f"  {company_key}: ERROR - {e}")
-                    results_summary.append((company_key, 0, None))
+                    print(f"[{completed:3}/{len(companies_to_scrape)}] {company_key:30} ERROR: {str(e)[:30]}")
+                    results_summary.append((company_key, 0, 0, None))
 
         # Final summary
-        print("\n" + "=" * 60)
-        print("PARALLEL SCRAPE COMPLETE")
-        print("=" * 60)
+        print("-" * 60)
         total_jobs = sum(r[1] for r in results_summary)
+        total_desc = sum(r[2] for r in results_summary)
         successful = sum(1 for r in results_summary if r[1] > 0)
-        print(f"Companies scraped: {successful}/{len(companies_to_scrape)}")
-        print(f"Total jobs found: {total_jobs}")
+        failed = len(companies_to_scrape) - successful
+        print(f"DONE: {successful} companies, {total_jobs} jobs ({total_desc} with descriptions)")
+        if failed > 0:
+            print(f"FAILED: {failed} companies")
     else:
         # Sequential execution
         for company_key in companies_to_scrape:
