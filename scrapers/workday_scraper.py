@@ -18,9 +18,13 @@ import json
 import requests
 import argparse
 import time
+import os
 from pathlib import Path
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# For I/O-bound tasks, use more threads than CPUs (they're mostly waiting on network)
+DEFAULT_WORKERS = max(10, (os.cpu_count() or 4) * 2)
 
 BASE_DIR = Path(__file__).parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
@@ -830,7 +834,8 @@ def main():
     parser.add_argument("--no-desc", action="store_true", help="Skip fetching descriptions")
     parser.add_argument("--all", "-a", action="store_true", help="Scrape all companies")
     parser.add_argument("--parallel", "-p", action="store_true", help="Scrape companies in parallel")
-    parser.add_argument("--workers", "-w", type=int, default=5, help="Number of parallel workers (default: 5)")
+    parser.add_argument("--workers", "-w", type=int, default=DEFAULT_WORKERS,
+                        help=f"Number of parallel workers (default: {DEFAULT_WORKERS})")
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(exist_ok=True)

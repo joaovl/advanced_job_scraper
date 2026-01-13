@@ -28,9 +28,13 @@ import json
 import argparse
 import subprocess
 import sys
+import os
 from pathlib import Path
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# For I/O-bound tasks, use more threads than CPUs
+DEFAULT_WORKERS = max(6, (os.cpu_count() or 4) * 2)
 
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "output"
@@ -395,8 +399,8 @@ Examples:
 
         if args.parallel and len(scrapers_to_run) > 1:
             # Run scrapers in parallel
-            print(f"\nRunning {len(scrapers_to_run)} scrapers in PARALLEL...")
-            with ThreadPoolExecutor(max_workers=len(scrapers_to_run)) as executor:
+            print(f"\nRunning {len(scrapers_to_run)} scrapers in PARALLEL ({DEFAULT_WORKERS} workers)...")
+            with ThreadPoolExecutor(max_workers=DEFAULT_WORKERS) as executor:
                 futures = {}
                 for name, func, func_args in scrapers_to_run:
                     future = executor.submit(func, *func_args)
