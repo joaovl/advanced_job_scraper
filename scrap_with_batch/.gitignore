@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archive folder (old/unused scripts)
+archive/
+
+# Output folder (all scraped/analyzed data)
+output/
+!output/.gitkeep
+
+# Output files in root (can be regenerated)
+*.xlsx
+*.json
+!config.json
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Selenium/Chrome
+chromedriver.exe
+*.exe
+
+# Temporary files
+*.tmp
+*.bak
