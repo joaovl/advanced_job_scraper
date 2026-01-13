@@ -22,8 +22,9 @@ from pathlib import Path
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# For I/O-bound AI API calls, use multiple threads
-DEFAULT_WORKERS = max(4, (os.cpu_count() or 4))
+# For AI API calls - keep low to avoid rate limiting
+# Claude API has rate limits, so don't overwhelm it
+DEFAULT_AI_WORKERS = 4
 
 try:
     import openpyxl
@@ -288,48 +289,66 @@ Return ONLY a JSON object (no markdown, no explanation, just the JSON):
     return {"score": 0, "match": False, "reasons": ["Could not parse AI response"]}
 
 
-def score_with_claude(prompt: str, config: dict) -> str:
-    """Run Claude CLI with the given prompt and return the response."""
+def score_with_claude(prompt: str, config: dict, max_retries: int = 3) -> str:
+    """Run Claude CLI with the given prompt and return the response. Includes retry logic."""
     import tempfile
+    import time
+    import random
 
     claude_model = config.get('claude_model', 'sonnet')
 
-    # Write prompt to temp file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
-        f.write(prompt)
-        prompt_file = f.name
+    for attempt in range(max_retries):
+        # Write prompt to temp file with unique name to avoid conflicts
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+            f.write(prompt)
+            prompt_file = f.name
 
-    try:
-        # Build claude command
-        # Using -p for print mode (non-interactive), --model for model selection
-        cmd = ["claude", "-p", prompt, "--output-format", "text"]
+        try:
+            # Build claude command
+            cmd = ["claude", "-p", prompt, "--output-format", "text"]
 
-        # Add model if specified (haiku is cheaper/faster for this task)
-        if claude_model in ['haiku', 'sonnet', 'opus']:
-            cmd.extend(["--model", claude_model])
+            # Add model if specified (haiku is cheaper/faster for this task)
+            if claude_model in ['haiku', 'sonnet', 'opus']:
+                cmd.extend(["--model", claude_model])
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=60,
-            encoding='utf-8'
-        )
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=90,
+                encoding='utf-8'
+            )
 
-        # Clean up temp file
-        Path(prompt_file).unlink(missing_ok=True)
+            # Clean up temp file
+            Path(prompt_file).unlink(missing_ok=True)
 
-        if result.returncode != 0:
-            raise Exception(f"Claude CLI error: {result.stderr[:200]}")
+            if result.returncode != 0:
+                error_msg = result.stderr[:200] if result.stderr else "Unknown error"
+                # Check for rate limiting
+                if "rate" in error_msg.lower() or "limit" in error_msg.lower() or "overloaded" in error_msg.lower():
+                    if attempt < max_retries - 1:
+                        wait_time = (attempt + 1) * 2 + random.uniform(0, 1)
+                        time.sleep(wait_time)
+                        continue
+                raise Exception(f"Claude CLI error: {error_msg}")
 
-        return result.stdout
+            return result.stdout
 
-    except subprocess.TimeoutExpired:
-        Path(prompt_file).unlink(missing_ok=True)
-        raise Exception("Claude CLI timeout (60s)")
-    except Exception as e:
-        Path(prompt_file).unlink(missing_ok=True)
-        raise e
+        except subprocess.TimeoutExpired:
+            Path(prompt_file).unlink(missing_ok=True)
+            if attempt < max_retries - 1:
+                time.sleep(2)
+                continue
+            raise Exception("Claude CLI timeout (90s)")
+        except Exception as e:
+            Path(prompt_file).unlink(missing_ok=True)
+            if attempt < max_retries - 1 and ("rate" in str(e).lower() or "overloaded" in str(e).lower()):
+                wait_time = (attempt + 1) * 2 + random.uniform(0, 1)
+                time.sleep(wait_time)
+                continue
+            raise e
+
+    raise Exception("Max retries exceeded")
 
 
 def score_with_llama_cli(prompt: str, config: dict) -> str:
@@ -414,7 +433,7 @@ def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None, parallel: 
         print("No jobs passed quick filter.")
     elif parallel and len(jobs_for_ai) > 1:
         # Parallel AI scoring with clean output
-        num_workers = workers or DEFAULT_WORKERS
+        num_workers = workers or DEFAULT_AI_WORKERS
         print(f"\nScoring {len(jobs_for_ai)} jobs with AI in PARALLEL ({num_workers} workers)...")
 
         def score_single_job(item):
@@ -765,8 +784,8 @@ Examples:
     parser.add_argument("--limit", "-n", type=int, help="Limit number of jobs to process")
     parser.add_argument("--min-score", type=int, help="Minimum score to match (default: 6)")
     parser.add_argument("--parallel", "-p", action="store_true", help="Score jobs in parallel (faster)")
-    parser.add_argument("--workers", "-w", type=int, default=DEFAULT_WORKERS,
-                        help=f"Number of parallel workers (default: {DEFAULT_WORKERS})")
+    parser.add_argument("--workers", "-w", type=int, default=DEFAULT_AI_WORKERS,
+                        help=f"Number of parallel workers (default: {DEFAULT_AI_WORKERS})")
 
     # Backend selection (mutually exclusive)
     backend_group = parser.add_argument_group("AI Backend (choose one)")
