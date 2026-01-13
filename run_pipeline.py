@@ -68,19 +68,20 @@ def run_command(cmd: list, description: str, cwd: str = None) -> bool:
         return False
 
 
-def run_workday_scrapers(location: str = "London") -> bool:
+def run_workday_scrapers(location: str = "London", parallel: bool = False) -> bool:
     """Run Workday API scrapers for 39+ companies."""
-    print_header("WORKDAY SCRAPERS (39+ companies)")
+    print_header("WORKDAY SCRAPERS (87+ companies)")
 
     script = SCRAPERS_DIR / "workday_scraper.py"
     if not script.exists():
         print(f"  Script not found: {script}")
         return False
 
-    return run_command(
-        [sys.executable, str(script), "--all", "--search", location],
-        "Scraping Workday companies"
-    )
+    cmd = [sys.executable, str(script), "--all", "--search", location]
+    if parallel:
+        cmd.append("--parallel")
+
+    return run_command(cmd, "Scraping Workday companies")
 
 
 def run_playwright_scrapers(location: str = "London") -> bool:
@@ -246,7 +247,7 @@ def copy_linkedin_jobs_to_n8n() -> int:
         return 0
 
 
-def run_ai_filter(claude_model: str = "haiku", limit: int = None, location: str = None) -> bool:
+def run_ai_filter(claude_model: str = "haiku", limit: int = None, location: str = None, parallel: bool = False) -> bool:
     """Run AI filter with Claude to score jobs."""
     print_header("AI JOB FILTER (Claude)")
 
@@ -262,6 +263,9 @@ def run_ai_filter(claude_model: str = "haiku", limit: int = None, location: str 
 
     if location:
         cmd.extend(["--location", location])
+
+    if parallel:
+        cmd.append("--parallel")
 
     return run_command(cmd, f"Running AI filter with Claude {claude_model}")
 
@@ -385,7 +389,7 @@ Examples:
         # Build list of scrapers to run
         scrapers_to_run = []
         if not args.skip_workday:
-            scrapers_to_run.append(('workday', run_workday_scrapers, [args.location]))
+            scrapers_to_run.append(('workday', run_workday_scrapers, [args.location, args.parallel]))
         if not args.skip_playwright:
             scrapers_to_run.append(('playwright', run_playwright_scrapers, [args.location]))
         if not args.skip_html:
@@ -426,7 +430,8 @@ Examples:
         run_ai_filter(
             claude_model=args.claude_model,
             limit=args.limit,
-            location=args.location
+            location=args.location,
+            parallel=args.parallel
         )
 
     # Summary
