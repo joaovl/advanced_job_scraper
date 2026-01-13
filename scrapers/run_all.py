@@ -210,7 +210,10 @@ def find_folder_for_company(company: str, config: dict) -> Path:
     if exact_path.exists():
         return exact_path
 
-    # Try case-insensitive match
+    # Try case-insensitive match (only if directory exists)
+    if not COMPANY_PAGES_DIR.exists():
+        return exact_path
+
     target = config["folder"].lower().replace("_", "").replace("-", "").replace(" ", "")
     for folder in COMPANY_PAGES_DIR.iterdir():
         if folder.is_dir():
