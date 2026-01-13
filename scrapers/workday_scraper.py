@@ -6,10 +6,12 @@ Scrapes job listings from companies using Workday's career platform.
 The Workday API follows a consistent pattern across companies.
 
 Usage:
-    python scrapers/workday_scraper.py                    # Run all configured companies
-    python scrapers/workday_scraper.py --company nvidia   # Run specific company
-    python scrapers/workday_scraper.py --list             # List available companies
-    python scrapers/workday_scraper.py --test nvidia      # Test API endpoint
+    python scrapers/workday_scraper.py --all --search London           # All companies sequentially
+    python scrapers/workday_scraper.py --all --search London --parallel  # All companies in parallel
+    python scrapers/workday_scraper.py --all -p -w 10                  # Parallel with 10 workers
+    python scrapers/workday_scraper.py --company nvidia --search UK    # Specific company
+    python scrapers/workday_scraper.py --list                          # List available companies
+    python scrapers/workday_scraper.py --test nvidia                   # Test API endpoint
 """
 
 import json
@@ -18,6 +20,7 @@ import argparse
 import time
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BASE_DIR = Path(__file__).parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
@@ -826,6 +829,8 @@ def main():
     parser.add_argument("--search", "-s", help="Search text (e.g., 'London', 'Engineer')")
     parser.add_argument("--no-desc", action="store_true", help="Skip fetching descriptions")
     parser.add_argument("--all", "-a", action="store_true", help="Scrape all companies")
+    parser.add_argument("--parallel", "-p", action="store_true", help="Scrape companies in parallel")
+    parser.add_argument("--workers", "-w", type=int, default=5, help="Number of parallel workers (default: 5)")
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -852,7 +857,8 @@ def main():
         print("Use --list to see available companies")
         return
 
-    for company_key in companies_to_scrape:
+    def process_company(company_key):
+        """Process a single company and save results."""
         result = scrape_company(
             company_key,
             location_search=args.search,
@@ -860,26 +866,72 @@ def main():
         )
 
         if result and result["total_jobs"] > 0:
-            # Save output
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_file = OUTPUT_DIR / f"{company_key}_workday_{timestamp}.json"
 
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
 
-            print(f"\nSaved to {output_file}")
+            return company_key, result["total_jobs"], output_file
+        return company_key, 0, None
 
-            # Summary
-            print("\n" + "=" * 60)
-            print("SUMMARY")
-            print("=" * 60)
-            for job in result["jobs"][:5]:
-                print(f"- {job['title'][:40]}")
-                print(f"  {job['location']}")
-                if job.get("description"):
-                    print(f"  {job['description'][:50]}...")
-            if len(result["jobs"]) > 5:
-                print(f"\n... and {len(result['jobs']) - 5} more jobs")
+    if args.parallel and len(companies_to_scrape) > 1:
+        # Parallel execution
+        print(f"\nScraping {len(companies_to_scrape)} companies in PARALLEL ({args.workers} workers)...")
+        results_summary = []
+
+        with ThreadPoolExecutor(max_workers=args.workers) as executor:
+            futures = {executor.submit(process_company, key): key for key in companies_to_scrape}
+
+            for future in as_completed(futures):
+                company_key = futures[future]
+                try:
+                    key, count, output_file = future.result()
+                    results_summary.append((key, count, output_file))
+                    if count > 0:
+                        print(f"  {WORKDAY_COMPANIES[key]['name']}: {count} jobs")
+                except Exception as e:
+                    print(f"  {company_key}: ERROR - {e}")
+                    results_summary.append((company_key, 0, None))
+
+        # Final summary
+        print("\n" + "=" * 60)
+        print("PARALLEL SCRAPE COMPLETE")
+        print("=" * 60)
+        total_jobs = sum(r[1] for r in results_summary)
+        successful = sum(1 for r in results_summary if r[1] > 0)
+        print(f"Companies scraped: {successful}/{len(companies_to_scrape)}")
+        print(f"Total jobs found: {total_jobs}")
+    else:
+        # Sequential execution
+        for company_key in companies_to_scrape:
+            result = scrape_company(
+                company_key,
+                location_search=args.search,
+                fetch_descriptions=not args.no_desc
+            )
+
+            if result and result["total_jobs"] > 0:
+                # Save output
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_file = OUTPUT_DIR / f"{company_key}_workday_{timestamp}.json"
+
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    json.dump(result, f, indent=2, ensure_ascii=False)
+
+                print(f"\nSaved to {output_file}")
+
+                # Summary
+                print("\n" + "=" * 60)
+                print("SUMMARY")
+                print("=" * 60)
+                for job in result["jobs"][:5]:
+                    print(f"- {job['title'][:40]}")
+                    print(f"  {job['location']}")
+                    if job.get("description"):
+                        print(f"  {job['description'][:50]}...")
+                if len(result["jobs"]) > 5:
+                    print(f"\n... and {len(result['jobs']) - 5} more jobs")
 
 
 if __name__ == "__main__":
