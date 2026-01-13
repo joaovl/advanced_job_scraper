@@ -14,6 +14,7 @@ This unified script:
 
 Usage:
     python run_pipeline.py                           # Run everything
+    python run_pipeline.py --parallel                # Run scrapers in parallel (faster)
     python run_pipeline.py --location London         # Specify location
     python run_pipeline.py --skip-linkedin           # Skip LinkedIn (rate limited)
     python run_pipeline.py --skip-remote             # Skip remote job boards
@@ -29,6 +30,7 @@ import subprocess
 import sys
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "output"
@@ -343,6 +345,8 @@ Examples:
                         help="Skip company-specific scrapers (HSBC, Barclays, etc.)")
     parser.add_argument("--quick", action="store_true",
                         help="Quick mode: skip slow scrapers (LinkedIn, Playwright, company)")
+    parser.add_argument("--parallel", "-p", action="store_true",
+                        help="Run scrapers in parallel (faster but more resource intensive)")
     parser.add_argument("--ai-only", action="store_true",
                         help="Only run AI filter on existing data")
     parser.add_argument("--scrape-only", action="store_true",
@@ -374,24 +378,41 @@ Examples:
     scraper_results = {}
 
     if not args.ai_only:
-        # Run scrapers
+        # Build list of scrapers to run
+        scrapers_to_run = []
         if not args.skip_workday:
-            scraper_results['workday'] = run_workday_scrapers(args.location)
-
+            scrapers_to_run.append(('workday', run_workday_scrapers, [args.location]))
         if not args.skip_playwright:
-            scraper_results['playwright'] = run_playwright_scrapers(args.location)
-
+            scrapers_to_run.append(('playwright', run_playwright_scrapers, [args.location]))
         if not args.skip_html:
-            scraper_results['html'] = run_html_scrapers()
-
+            scrapers_to_run.append(('html', run_html_scrapers, []))
         if not args.skip_company:
-            scraper_results['company'] = run_company_scrapers()
-
+            scrapers_to_run.append(('company', run_company_scrapers, []))
         if not args.skip_linkedin:
-            scraper_results['linkedin'] = run_linkedin_scraper(f"{args.location}, UK")
-
+            scrapers_to_run.append(('linkedin', run_linkedin_scraper, [f"{args.location}, UK"]))
         if not args.skip_remote:
-            scraper_results['remote'] = run_remote_scrapers()
+            scrapers_to_run.append(('remote', run_remote_scrapers, []))
+
+        if args.parallel and len(scrapers_to_run) > 1:
+            # Run scrapers in parallel
+            print(f"\nRunning {len(scrapers_to_run)} scrapers in PARALLEL...")
+            with ThreadPoolExecutor(max_workers=len(scrapers_to_run)) as executor:
+                futures = {}
+                for name, func, func_args in scrapers_to_run:
+                    future = executor.submit(func, *func_args)
+                    futures[future] = name
+
+                for future in as_completed(futures):
+                    name = futures[future]
+                    try:
+                        scraper_results[name] = future.result()
+                    except Exception as e:
+                        print(f"  {name} ERROR: {e}")
+                        scraper_results[name] = False
+        else:
+            # Run scrapers sequentially
+            for name, func, func_args in scrapers_to_run:
+                scraper_results[name] = func(*func_args)
 
         # Consolidate all jobs (includes output/, Company_Pages/, and LinkedIn)
         consolidate_jobs()
