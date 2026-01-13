@@ -17,8 +17,13 @@ import argparse
 import requests
 import sys
 import subprocess
+import os
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# For I/O-bound AI API calls, use multiple threads
+DEFAULT_WORKERS = max(4, (os.cpu_count() or 4))
 
 try:
     import openpyxl
@@ -368,7 +373,7 @@ def score_with_llama_cli(prompt: str, config: dict) -> str:
         raise e
 
 
-def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None) -> list:
+def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None, parallel: bool = False, workers: int = None) -> list:
     """Filter jobs using quick filters and AI scoring."""
     exclude_title = config.get('exclude_in_title', [])
     exclude_desc = config.get('exclude_in_description', [])
@@ -385,11 +390,11 @@ def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None) -> list:
     print(f"\nProcessing {total} jobs...")
     print("-" * 60)
 
+    # Step 1: Quick filter (fast, sequential)
+    jobs_for_ai = []
     for i, job in enumerate(jobs_to_process):
         title = job.get('title', 'Unknown')[:50]
-        company = job.get('company', 'Unknown')[:20]
 
-        # Quick filter first
         passed, reason = quick_filter(job, exclude_title, exclude_desc)
 
         if not passed:
@@ -401,34 +406,96 @@ def filter_jobs(jobs: list, config: dict, cv: str, limit: int = None) -> list:
             })
             rejected_quick += 1
             print(f"[{i+1}/{total}] SKIP: {title} - {reason}")
-            continue
-
-        # AI scoring
-        print(f"[{i+1}/{total}] AI: {title} @ {company}...", end=" ", flush=True)
-        ai_result = score_job_with_ai(job, cv, config)
-
-        score = ai_result.get('score', 0)
-        is_match = ai_result.get('match', False) and score >= min_score
-        reasons = ai_result.get('reasons', [])
-
-        if is_match:
-            results.append({
-                **job,
-                "decision": "MATCHED",
-                "score": score,
-                "reason": "; ".join(reasons[:2])
-            })
-            matched += 1
-            print(f"MATCH (score {score})")
         else:
-            results.append({
-                **job,
-                "decision": "REJECTED",
-                "score": score,
-                "reason": "; ".join(reasons[:2])
-            })
-            rejected_ai += 1
-            print(f"REJECT (score {score})")
+            jobs_for_ai.append((i, job))
+
+    # Step 2: AI scoring
+    if not jobs_for_ai:
+        print("No jobs passed quick filter.")
+    elif parallel and len(jobs_for_ai) > 1:
+        # Parallel AI scoring
+        num_workers = workers or DEFAULT_WORKERS
+        print(f"\nScoring {len(jobs_for_ai)} jobs with AI in PARALLEL ({num_workers} workers)...")
+
+        def score_single_job(item):
+            idx, job = item
+            ai_result = score_job_with_ai(job, cv, config)
+            return idx, job, ai_result
+
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = {executor.submit(score_single_job, item): item for item in jobs_for_ai}
+            completed = 0
+
+            for future in as_completed(futures):
+                completed += 1
+                try:
+                    idx, job, ai_result = future.result()
+                    title = job.get('title', 'Unknown')[:50]
+                    company = job.get('company', 'Unknown')[:20]
+
+                    score = ai_result.get('score', 0)
+                    is_match = ai_result.get('match', False) and score >= min_score
+                    reasons = ai_result.get('reasons', [])
+
+                    if is_match:
+                        results.append({
+                            **job,
+                            "decision": "MATCHED",
+                            "score": score,
+                            "reason": "; ".join(reasons[:2])
+                        })
+                        matched += 1
+                        print(f"[{completed}/{len(jobs_for_ai)}] MATCH: {title} @ {company} (score {score})")
+                    else:
+                        results.append({
+                            **job,
+                            "decision": "REJECTED",
+                            "score": score,
+                            "reason": "; ".join(reasons[:2])
+                        })
+                        rejected_ai += 1
+                        print(f"[{completed}/{len(jobs_for_ai)}] REJECT: {title} @ {company} (score {score})")
+
+                except Exception as e:
+                    idx, job = futures[future]
+                    results.append({
+                        **job,
+                        "decision": "REJECTED",
+                        "score": 0,
+                        "reason": f"AI error: {e}"
+                    })
+                    rejected_ai += 1
+    else:
+        # Sequential AI scoring
+        for i, (idx, job) in enumerate(jobs_for_ai):
+            title = job.get('title', 'Unknown')[:50]
+            company = job.get('company', 'Unknown')[:20]
+
+            print(f"[{i+1}/{len(jobs_for_ai)}] AI: {title} @ {company}...", end=" ", flush=True)
+            ai_result = score_job_with_ai(job, cv, config)
+
+            score = ai_result.get('score', 0)
+            is_match = ai_result.get('match', False) and score >= min_score
+            reasons = ai_result.get('reasons', [])
+
+            if is_match:
+                results.append({
+                    **job,
+                    "decision": "MATCHED",
+                    "score": score,
+                    "reason": "; ".join(reasons[:2])
+                })
+                matched += 1
+                print(f"MATCH (score {score})")
+            else:
+                results.append({
+                    **job,
+                    "decision": "REJECTED",
+                    "score": score,
+                    "reason": "; ".join(reasons[:2])
+                })
+                rejected_ai += 1
+                print(f"REJECT (score {score})")
 
     print("-" * 60)
     print(f"Results: {matched} matched, {rejected_quick} quick-rejected, {rejected_ai} AI-rejected")
@@ -676,23 +743,28 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Run with Claude (cloud)
+    # Run with Claude in parallel (fastest)
+    python job_filter_ai.py --claude --claude-model haiku -l London --parallel
+
+    # Run with Claude (sequential)
     python job_filter_ai.py --claude --claude-model haiku --location London
 
-    # Run with Ollama (local) - requires: ollama serve
-    python job_filter_ai.py --ollama --model qwen2.5:7b --location London
+    # Run with Ollama in parallel
+    python job_filter_ai.py --ollama --model qwen2.5:7b -l London --parallel
 
     # Run with llama.cpp (local) - requires: llama-cli in PATH
     python job_filter_ai.py --llama-cli --location London
 
-    # Compare models: run each separately, outputs have model name in filename
-    python job_filter_ai.py --claude --claude-model haiku -l London
-    python job_filter_ai.py --ollama --model llama3.2 -l London
+    # Parallel with custom worker count
+    python job_filter_ai.py --claude -p -w 20 -l London
         """
     )
     parser.add_argument("--location", "-l", help="Filter by location first (e.g., 'London')")
     parser.add_argument("--limit", "-n", type=int, help="Limit number of jobs to process")
     parser.add_argument("--min-score", type=int, help="Minimum score to match (default: 6)")
+    parser.add_argument("--parallel", "-p", action="store_true", help="Score jobs in parallel (faster)")
+    parser.add_argument("--workers", "-w", type=int, default=DEFAULT_WORKERS,
+                        help=f"Number of parallel workers (default: {DEFAULT_WORKERS})")
 
     # Backend selection (mutually exclusive)
     backend_group = parser.add_argument_group("AI Backend (choose one)")
@@ -803,7 +875,7 @@ Examples:
         sys.exit(1)
 
     # Filter jobs
-    results = filter_jobs(jobs, config, cv, limit=args.limit)
+    results = filter_jobs(jobs, config, cv, limit=args.limit, parallel=args.parallel, workers=args.workers)
 
     # Save results with model name in filename for easy comparison
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
