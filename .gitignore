@@ -54,6 +54,7 @@ N8n/*.json
 
 # Claude Code settings
 .claude/
+CLAUDE.md
 
 # Backup directories
 output - Copy*/
