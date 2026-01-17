@@ -73,7 +73,7 @@ class LinkedInConfig:
     BASE_URL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
     # API endpoint for job details (less rate limited)
     JOB_DETAIL_API = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
-    JOBS_PER_PAGE = 25
+    JOBS_PER_PAGE = 10  # LinkedIn returns 10 jobs per page
 
     # Rate limiting - VERY conservative settings to avoid 429s
     MIN_DELAY = 2.0           # Minimum delay between description fetches
@@ -162,9 +162,28 @@ class LinkedInScraper:
             return match.group(1)
         return None
 
-    def _extract_job_data(self, job_card: BeautifulSoup) -> Optional[JobData]:
+    def _extract_job_data(self, job_card: BeautifulSoup, skip_promoted: bool = True) -> Optional[JobData]:
         """Extract job data from a job card HTML"""
         try:
+            # Check if job is promoted/sponsored - skip these if requested
+            if skip_promoted:
+                # Check footer for "Promoted" text
+                footer = job_card.find("footer")
+                if footer:
+                    footer_text = footer.get_text(strip=True).lower()
+                    if "promoted" in footer_text:
+                        return None
+
+                # Also check for promoted badge/label anywhere in the card
+                promoted_span = job_card.find("span", string=re.compile(r"promoted", re.IGNORECASE))
+                if promoted_span:
+                    return None
+
+                # Check for any element with "promoted" in class name
+                promoted_el = job_card.find(class_=re.compile(r"promoted", re.IGNORECASE))
+                if promoted_el:
+                    return None
+
             title = job_card.find("h3", class_="base-search-card__title").text.strip()
             company = job_card.find("h4", class_="base-search-card__subtitle").text.strip()
             location = job_card.find("span", class_="job-search-card__location").text.strip()
@@ -397,28 +416,34 @@ class LinkedInScraper:
         return job
 
     def _fetch_page_jobs(self, keywords: str, location: str, start: int,
-                         time_range_seconds: Optional[int] = None) -> List[JobData]:
-        """Fetch jobs from a single search page"""
+                         time_range_seconds: Optional[int] = None,
+                         skip_promoted: bool = True) -> tuple[List[JobData], int]:
+        """Fetch jobs from a single search page. Returns (jobs, promoted_count)."""
         url = self._build_search_url(keywords, location, start, time_range_seconds)
         soup = self._fetch_page(url)
 
         if not soup:
-            return []
+            return [], 0
 
         job_cards = soup.find_all("div", class_="base-card")
 
         jobs = []
+        promoted_count = 0
         for card in job_cards:
-            job = self._extract_job_data(card)
+            job = self._extract_job_data(card, skip_promoted=skip_promoted)
             if job:
                 jobs.append(job)
-        return jobs
+            elif skip_promoted:
+                # Job was skipped (likely promoted)
+                promoted_count += 1
+        return jobs, promoted_count
 
     def scrape_jobs(self, keywords: str, location: str,
                     max_jobs: Optional[int] = None,
                     fetch_description: bool = True,
                     time_range_seconds: Optional[int] = None,
-                    existing_urls: Optional[Set[str]] = None) -> List[JobData]:
+                    existing_urls: Optional[Set[str]] = None,
+                    skip_promoted: bool = True) -> List[JobData]:
         """
         Scrape LinkedIn jobs matching criteria.
 
@@ -429,6 +454,7 @@ class LinkedInScraper:
             fetch_description: Whether to fetch full descriptions
             time_range_seconds: Only jobs posted within this time range
             existing_urls: Set of URLs to skip (already scraped)
+            skip_promoted: Whether to skip promoted/sponsored job listings
 
         Returns:
             List of JobData objects
@@ -436,6 +462,7 @@ class LinkedInScraper:
         all_jobs = []
         seen_urls = existing_urls.copy() if existing_urls else set()
         skipped_count = 0
+        total_promoted_skipped = 0
 
         target = max_jobs if max_jobs else LinkedInConfig.MAX_LINKEDIN_JOBS
         consecutive_empty = 0
@@ -443,6 +470,7 @@ class LinkedInScraper:
 
         logger.info(f"Searching LinkedIn for: {keywords} in {location}")
         logger.info(f"Target: {max_jobs or 'ALL'} jobs")
+        logger.info(f"Skip promoted jobs: {skip_promoted}")
         if existing_urls:
             logger.info(f"Will skip {len(existing_urls)} existing jobs")
 
@@ -457,7 +485,8 @@ class LinkedInScraper:
                 delay = random.uniform(0.5, 1.5)
                 time.sleep(delay)
 
-            page_jobs = self._fetch_page_jobs(keywords, location, start, time_range_seconds)
+            page_jobs, promoted_count = self._fetch_page_jobs(keywords, location, start, time_range_seconds, skip_promoted)
+            total_promoted_skipped += promoted_count
 
             if page_jobs:
                 new_jobs = 0
@@ -469,7 +498,8 @@ class LinkedInScraper:
                     elif job.url in seen_urls:
                         skipped_count += 1
 
-                logger.info(f"Page {page_idx + 1}: {len(page_jobs)} jobs, {new_jobs} new, {skipped_count} skipped (total: {len(all_jobs)})")
+                promoted_msg = f", {promoted_count} promoted" if promoted_count > 0 else ""
+                logger.info(f"Page {page_idx + 1}: {len(page_jobs)} jobs, {new_jobs} new, {skipped_count} skipped{promoted_msg} (total: {len(all_jobs)})")
 
                 if new_jobs == 0:
                     consecutive_empty += 1
@@ -489,7 +519,8 @@ class LinkedInScraper:
                 logger.info(f"  Pausing {LinkedInConfig.BATCH_DELAY}s...")
                 time.sleep(LinkedInConfig.BATCH_DELAY)
 
-        logger.info(f"Found {len(all_jobs)} new unique jobs (skipped {skipped_count} existing)")
+        promoted_msg = f", {total_promoted_skipped} promoted" if total_promoted_skipped > 0 else ""
+        logger.info(f"Found {len(all_jobs)} new unique jobs (skipped {skipped_count} existing{promoted_msg})")
 
         # Trim to max
         if max_jobs and len(all_jobs) > max_jobs:
@@ -643,6 +674,8 @@ def main():
     parser.add_argument("-o", "--output", help="Output filename")
     parser.add_argument("--no-merge", action="store_true",
                         help="Don't merge with existing file (overwrite)")
+    parser.add_argument("--include-promoted", action="store_true",
+                        help="Include promoted/sponsored job listings (excluded by default)")
 
     args = parser.parse_args()
     config = load_config()
@@ -678,7 +711,8 @@ def main():
                 max_jobs=max_jobs,
                 fetch_description=not args.no_description,
                 time_range_seconds=time_range_seconds,
-                existing_urls=existing_urls
+                existing_urls=existing_urls,
+                skip_promoted=not args.include_promoted
             )
 
             all_jobs.extend(jobs)
@@ -702,7 +736,8 @@ def main():
             max_jobs=max_jobs,
             fetch_description=not args.no_description,
             time_range_seconds=time_range_seconds,
-            existing_urls=existing_urls
+            existing_urls=existing_urls,
+            skip_promoted=not args.include_promoted
         )
     else:
         logger.error("Please specify --keywords or --all-titles")
