@@ -90,8 +90,8 @@ def fetch_job_listings(location: str = "", start: int = 0) -> List[Job]:
 
         loc = location_cell.get_text(strip=True) if location_cell else ""
 
-        # Extract job ID from URL (e.g., /job/12345/title-here)
-        job_id_match = re.search(r'/job/(\d+)', url)
+        # Extract job ID from URL (e.g., /job/Location-Title-Here/1284156701/)
+        job_id_match = re.search(r'/(\d+)/?$', url)
         job_id = job_id_match.group(1) if job_id_match else ""
 
         if title:
@@ -111,7 +111,8 @@ def fetch_job_listings(location: str = "", start: int = 0) -> List[Job]:
             if not url.startswith('http'):
                 url = f"{BASE_URL}{url}"
 
-            job_id_match = re.search(r'/job/(\d+)', url)
+            # Extract job ID from URL (e.g., /job/Location-Title-Here/1284156701/)
+            job_id_match = re.search(r'/(\d+)/?$', url)
             job_id = job_id_match.group(1) if job_id_match else ""
 
             # Skip navigation/duplicate links
@@ -131,7 +132,7 @@ def fetch_all_jobs(location: str = "") -> List[Job]:
     all_jobs = []
     seen_ids = set()
     start = 0
-    page_size = 25
+    page_size = 20  # JLR returns 20 jobs per page
 
     print(f"Fetching JLR jobs{' in ' + location if location else ' (all locations)'}...")
 
