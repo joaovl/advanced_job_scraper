@@ -26,16 +26,45 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Claude API has rate limits, so don't overwhelm it
 DEFAULT_AI_WORKERS = 4
 
-try:
-    import openpyxl
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-    from openpyxl.utils import get_column_letter
-except ImportError:
-    print("Installing openpyxl...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "openpyxl", "-q"])
-    import openpyxl
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-    from openpyxl.utils import get_column_letter
+# Check required dependencies upfront
+def check_dependencies():
+    """Check that all required Python packages are installed."""
+    missing = []
+
+    try:
+        import openpyxl
+    except ImportError:
+        missing.append("openpyxl")
+
+    try:
+        import requests
+    except ImportError:
+        missing.append("requests")
+
+    if missing:
+        print("=" * 60)
+        print("ERROR: Missing required Python packages")
+        print("=" * 60)
+        print(f"\nMissing packages: {', '.join(missing)}")
+        print("\nTo install, use one of these methods:\n")
+        print("Option 1 - Using a virtual environment (recommended):")
+        print("  python3 -m venv venv")
+        print("  source venv/bin/activate  # On Linux/Mac")
+        print("  venv\\Scripts\\activate     # On Windows")
+        print(f"  pip install {' '.join(missing)}")
+        print("\nOption 2 - Using system packages (Debian/Ubuntu):")
+        apt_pkgs = ' '.join(f"python3-{pkg}" for pkg in missing)
+        print(f"  sudo apt install {apt_pkgs}")
+        print("\nOption 3 - Using pipx (for CLI tools):")
+        print("  pipx install advanced-job-scraper  # if published")
+        print()
+        sys.exit(1)
+
+check_dependencies()
+
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 
 BASE_DIR = Path(__file__).parent
 N8N_DIR = BASE_DIR / "N8n"
