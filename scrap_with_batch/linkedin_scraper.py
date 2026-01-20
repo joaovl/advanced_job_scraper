@@ -34,7 +34,8 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timedelta
+import re
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Set
 from urllib.parse import quote
@@ -52,6 +53,41 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def parse_relative_date(relative_str: str) -> str:
+    """Convert relative date like '2 hours ago' to ISO timestamp."""
+    if not relative_str or relative_str == "N/A":
+        return ""
+
+    now = datetime.now()
+    relative_str = relative_str.lower().strip()
+
+    # Match patterns like "2 hours ago", "1 day ago", "3 weeks ago"
+    match = re.match(r'(\d+)\s*(second|minute|hour|day|week|month)s?\s*ago', relative_str)
+    if match:
+        value = int(match.group(1))
+        unit = match.group(2)
+
+        if unit == 'second':
+            delta = timedelta(seconds=value)
+        elif unit == 'minute':
+            delta = timedelta(minutes=value)
+        elif unit == 'hour':
+            delta = timedelta(hours=value)
+        elif unit == 'day':
+            delta = timedelta(days=value)
+        elif unit == 'week':
+            delta = timedelta(weeks=value)
+        elif unit == 'month':
+            delta = timedelta(days=value * 30)  # Approximate
+        else:
+            return ""
+
+        posted_time = now - delta
+        return posted_time.isoformat()
+
+    return ""
+
+
 @dataclass
 class JobData:
     """Job data matching the format from job_scraper.py"""
@@ -63,6 +99,7 @@ class JobData:
     description: str = ""
     source: str = "LinkedIn"
     scraped_at: str = ""
+    posted_timestamp: str = ""  # ISO timestamp calculated from posted_date
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -199,7 +236,8 @@ class LinkedInScraper:
                 location=location,
                 url=job_link,
                 posted_date=posted_date,
-                scraped_at=datetime.now().isoformat()
+                scraped_at=datetime.now().isoformat(),
+                posted_timestamp=parse_relative_date(posted_date)
             )
         except Exception as e:
             logger.debug(f"Failed to extract job data: {e}")
@@ -664,7 +702,8 @@ def main():
     parser.add_argument("-l", "--location", help="Location (default: from config)")
     parser.add_argument("-n", "--max-jobs", type=int, default=0,
                         help="Max jobs per search (0 = all)")
-    parser.add_argument("-t", "--time-range", help="Time filter: 24h, 48h, 7d, 30d")
+    parser.add_argument("-t", "--time-range", help="Time filter: 2h, 6h, 24h, 48h, 7d, 30d")
+    parser.add_argument("--max-age", help="Local filter: only keep jobs posted within this time (e.g., 2h, 6h, 12h)")
     parser.add_argument("-a", "--all-titles", action="store_true",
                         help="Search all job titles from config")
     parser.add_argument("-nd", "--no-description", action="store_true",
@@ -742,6 +781,31 @@ def main():
     else:
         logger.error("Please specify --keywords or --all-titles")
         return
+
+    # Apply local max-age filter if specified
+    if args.max_age and all_jobs:
+        max_age_seconds = parse_time_range(args.max_age)
+        if max_age_seconds:
+            cutoff_time = datetime.now() - timedelta(seconds=max_age_seconds)
+            original_count = len(all_jobs)
+            filtered_jobs = []
+            for job in all_jobs:
+                job_dict = job.to_dict() if hasattr(job, 'to_dict') else job
+                posted_ts = job_dict.get('posted_timestamp', '')
+                if posted_ts:
+                    try:
+                        posted_dt = datetime.fromisoformat(posted_ts)
+                        if posted_dt >= cutoff_time:
+                            filtered_jobs.append(job)
+                    except:
+                        filtered_jobs.append(job)  # Keep if can't parse
+                else:
+                    # No timestamp, check posted_date for recent indicators
+                    posted_date = job_dict.get('posted_date', '').lower()
+                    if 'hour' in posted_date or 'minute' in posted_date or 'second' in posted_date:
+                        filtered_jobs.append(job)
+            all_jobs = filtered_jobs
+            logger.info(f"Max-age filter ({args.max_age}): {original_count} -> {len(all_jobs)} jobs")
 
     # Save results
     if all_jobs:
