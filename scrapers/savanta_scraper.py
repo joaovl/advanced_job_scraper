@@ -54,39 +54,94 @@ def extract_jobs_from_listing(html_path: Path) -> list[Job]:
 
     soup = BeautifulSoup(html, 'html.parser')
     jobs = []
+    seen_ids = set()
 
-    # BambooHR job items
-    for item in soup.select('.BambooHR-ATS-Jobs-Item'):
-        link = item.select_one('a')
-        location_el = item.select_one('.BambooHR-ATS-Location')
-        department_el = item.select_one('.BambooHR-ATS-Department')
+    # Try new Fabric/MUI structure first (2024+ layout)
+    job_blocks = soup.select('div[data-fabric-component="LayoutEscapeHatch"]')
 
-        if link:
-            title = link.get_text(strip=True)
-            url = link.get('href', '')
-            location = location_el.get_text(strip=True) if location_el else ""
-            department = department_el.get_text(strip=True) if department_el else ""
+    for block in job_blocks:
+        link = block.select_one('a.fab-LinkUnstyled, a[data-fabric-component="Link"]')
+        if not link:
+            continue
 
-            # Skip generic entries
-            if 'send us' in title.lower() or 'cv' in title.lower() or 'resume' in title.lower():
-                continue
+        title = link.get_text(strip=True)
+        url = link.get('href', '')
 
-            # Extract job ID from URL (e.g., /careers/127 -> 127)
-            job_id_match = re.search(r'/careers/(\d+)', url)
-            job_id = job_id_match.group(1) if job_id_match else ""
+        # Skip generic CV/resume entries
+        if 'send us' in title.lower() or 'cv' in title.lower() or 'resume' in title.lower():
+            continue
 
-            # Make URL absolute if relative
-            if url and not url.startswith('http'):
-                url = f"https://savanta.bamboohr.com{url}"
+        # Extract job ID from URL (e.g., /careers/507 -> 507)
+        job_id_match = re.search(r'/careers/(\d+)', url)
+        job_id = job_id_match.group(1) if job_id_match else ""
 
-            if title:
-                jobs.append(Job(
-                    title=title,
-                    location=location,
-                    url=url,
-                    job_id=job_id,
-                    department=department
-                ))
+        if not job_id:
+            continue
+
+        # Find location - look for text like "London, London, City of (Hybrid)"
+        location = ""
+        location_texts = block.select('p[data-fabric-component="BodyText"]')
+        for p in location_texts:
+            text = p.get_text(strip=True)
+            if 'London' in text or 'New York' in text or 'Toronto' in text or 'Remote' in text or 'Ontario' in text:
+                location = text
+                break
+
+        # Find department - usually first BodyText after the title
+        department = ""
+        parent = link.find_parent('div', {'data-fabric-component': 'LayoutBox'})
+        if parent:
+            dept_el = parent.select_one('p[data-fabric-component="BodyText"]')
+            if dept_el:
+                department = dept_el.get_text(strip=True)
+
+        # Make URL absolute if relative
+        if url and not url.startswith('http'):
+            url = f"https://savanta.bamboohr.com{url}"
+
+        if title and job_id not in seen_ids:
+            seen_ids.add(job_id)
+            jobs.append(Job(
+                title=title,
+                location=location,
+                url=url,
+                job_id=job_id,
+                department=department
+            ))
+
+    # Fallback: try old BambooHR structure
+    if not jobs:
+        for item in soup.select('.BambooHR-ATS-Jobs-Item'):
+            link = item.select_one('a')
+            location_el = item.select_one('.BambooHR-ATS-Location')
+            department_el = item.select_one('.BambooHR-ATS-Department')
+
+            if link:
+                title = link.get_text(strip=True)
+                url = link.get('href', '')
+                location = location_el.get_text(strip=True) if location_el else ""
+                department = department_el.get_text(strip=True) if department_el else ""
+
+                # Skip generic entries
+                if 'send us' in title.lower() or 'cv' in title.lower() or 'resume' in title.lower():
+                    continue
+
+                # Extract job ID from URL (e.g., /careers/127 -> 127)
+                job_id_match = re.search(r'/careers/(\d+)', url)
+                job_id = job_id_match.group(1) if job_id_match else ""
+
+                # Make URL absolute if relative
+                if url and not url.startswith('http'):
+                    url = f"https://savanta.bamboohr.com{url}"
+
+                if title:
+                    jobs.append(Job(
+                        title=title,
+                        location=location,
+                        url=url,
+                        job_id=job_id,
+                        department=department
+                    ))
 
     return jobs
 
