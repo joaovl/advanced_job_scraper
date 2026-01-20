@@ -40,7 +40,7 @@ MIN_SCORE=""                                        # Use default (7)
 
 # --- Run scrapers before filtering ---
 # Uncomment ONE of these to scrape first, or leave all commented to filter existing jobs
-SCRAPE_CMD="python run_pipeline.py --location London --skip-linkedin --parallel --claude-model sonnet"
+SCRAPE_CMD="python run_pipeline.py --location London --skip-workday --skip-playwright --skip-html --skip-remote --skip-company --parallel --claude-model sonnet"
 # SCRAPE_CMD="python scrapers/workday_scraper.py --all --search London"  # Workday only
 # SCRAPE_CMD="python scrapers/playwright_scraper_v2.py --all --location London"  # Big tech only
 # SCRAPE_CMD=""

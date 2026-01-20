@@ -40,7 +40,7 @@ set "MIN_SCORE="
 
 REM --- Run scrapers before filtering ---
 REM Uncomment ONE of these to scrape first
-set "SCRAPE_CMD=python run_pipeline.py --location London --skip-linkedin --parallel --claude-model sonnet"
+set "SCRAPE_CMD=python run_pipeline.py --location London --skip-workday --skip-playwright --skip-html --skip-remote --skip-company --parallel --claude-model sonnet"
 REM set "SCRAPE_CMD=python scrapers\workday_scraper.py --all --search London"
 REM set "SCRAPE_CMD=python scrapers\playwright_scraper_v2.py --all --location London"
 REM set "SCRAPE_CMD="
