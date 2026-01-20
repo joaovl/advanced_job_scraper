@@ -13,8 +13,8 @@ set -e
 # ============================================================
 
 # --- AI Backend (choose one) ---
-AI_BACKEND="--claude --claude-model haiku"
-# AI_BACKEND="--claude --claude-model sonnet"      # More accurate, slower
+# AI_BACKEND="--claude --claude-model haiku"
+AI_BACKEND="--claude --claude-model sonnet"      # More accurate, slower
 # AI_BACKEND="--ollama --model qwen2.5:7b"         # Local LLM (requires ollama serve)
 # AI_BACKEND="--llama-cli"                          # Local llama.cpp
 
@@ -40,10 +40,10 @@ MIN_SCORE=""                                        # Use default (7)
 
 # --- Run scrapers before filtering ---
 # Uncomment ONE of these to scrape first, or leave all commented to filter existing jobs
-# SCRAPE_CMD="python run_pipeline.py --location London"           # All scrapers
+SCRAPE_CMD="python run_pipeline.py --location London --skip-linkedin --parallel --claude-model sonnet"
 # SCRAPE_CMD="python scrapers/workday_scraper.py --all --search London"  # Workday only
 # SCRAPE_CMD="python scrapers/playwright_scraper_v2.py --all --location London"  # Big tech only
-SCRAPE_CMD=""
+# SCRAPE_CMD=""
 
 # ============================================================
 # SCRIPT START - Don't modify below unless you know what you're doing

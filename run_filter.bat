@@ -13,8 +13,8 @@ REM CONFIGURATION - Uncomment/modify the options you want
 REM ============================================================
 
 REM --- AI Backend (choose one) ---
-set "AI_BACKEND=--claude --claude-model haiku"
-REM set "AI_BACKEND=--claude --claude-model sonnet"
+REM set "AI_BACKEND=--claude --claude-model haiku"
+set "AI_BACKEND=--claude --claude-model sonnet"
 REM set "AI_BACKEND=--ollama --model qwen2.5:7b"
 REM set "AI_BACKEND=--llama-cli"
 
@@ -40,10 +40,10 @@ set "MIN_SCORE="
 
 REM --- Run scrapers before filtering ---
 REM Uncomment ONE of these to scrape first
-REM set "SCRAPE_CMD=python run_pipeline.py --location London"
+set "SCRAPE_CMD=python run_pipeline.py --location London --skip-linkedin --parallel --claude-model sonnet"
 REM set "SCRAPE_CMD=python scrapers\workday_scraper.py --all --search London"
 REM set "SCRAPE_CMD=python scrapers\playwright_scraper_v2.py --all --location London"
-set "SCRAPE_CMD="
+REM set "SCRAPE_CMD="
 
 REM ============================================================
 REM SCRIPT START - Don't modify below unless you know what you're doing
