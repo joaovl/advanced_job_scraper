@@ -256,21 +256,36 @@ def score_job_with_ai(job: dict, cv: str, config: dict) -> dict:
 
     prompt = f"""You are a job matching expert. Analyze if this job is a good match for the candidate.
 
+CANDIDATE TARGET ROLE:
+- Manager-of-Managers: Must manage Engineering Managers, not just ICs
+- 30+ engineers in org, multiple teams
+- Director/Head of Engineering level (NOT Team Lead, NOT single team)
+- Larger companies or established scale-ups (NOT early-stage startups)
+- Software product development background (NOT infrastructure, NOT data engineering, NOT security/network)
+
+AUTOMATIC REJECTION (score 1-4):
+- "Hands-on" or "coding expected" in description
+- Single team leadership
+- Early-stage startup (<50 employees)
+- Wrong domain: Security Engineering, Network Engineering, Data Engineering, DevOps/SRE, Platform/Infrastructure
+- IC role disguised as leadership
+- Team Lead or Tech Lead level (below Director)
+
 SCORING (1-10):
-- 9-10: Perfect match - role, seniority, and domain align well
-- 7-8: Good match - most requirements align
-- 5-6: Partial match - some alignment but gaps
-- 1-4: Poor match - wrong level, domain, or role type
+- 9-10: Perfect match - Director+ level, manager-of-managers, software product org, 30+ engineers
+- 7-8: Good match - Director level, larger org, minimal hands-on expectations
+- 5-6: Partial match - right level but some concerns (startup size, some hands-on)
+- 1-4: Poor match - fails any automatic rejection criteria above
 
 CANDIDATE CV:
-{cv[:2000]}
+{cv[:3000]}
 
 JOB TO ANALYZE:
 Title: {job.get('title', 'Unknown')}
 Company: {job.get('company', 'Unknown')}
 Location: {job.get('location', 'Unknown')}
 Remote: {job.get('remote_type', 'Unknown')}
-Description: {job.get('description', '')[:1500]}
+Description: {job.get('description', '')[:2000]}
 
 Return ONLY a JSON object (no markdown, no explanation, just the JSON):
 {{"score": <1-10>, "match": <true if score >= {min_score} else false>, "reasons": ["reason1", "reason2"]}}"""
