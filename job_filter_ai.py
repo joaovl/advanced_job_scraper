@@ -286,6 +286,11 @@ REJECT SIGNALS (automatic low score 1-4):
 - Pharma/medical device validation (not software engineering)
 - Network Security, Infrastructure Engineering, Platform Engineer (IC)
 - Requires deep expertise in specific tech stack as PRIMARY qualification
+- Contract, interim, or freelance roles (NOT permanent)
+- IR35 mentioned (indicates contract)
+- Day rate instead of salary
+- Part-time roles
+- Requires specific domain expertise: trading systems, fintech platforms, investment banking, e-commerce, adtech
 
 CANDIDATE BACKGROUND:
 - 15+ years software engineering, 8+ years leading engineering teams, 5 years manager-of-managers
@@ -296,6 +301,7 @@ CANDIDATE BACKGROUND:
 - ISO 9001/27001 compliance, zero audit findings over 5+ years
 - Experience in safety-critical software (automotive, aerospace, defence)
 - Based in Surrey UK, target salary £90K-£100K+
+- PERMANENT ROLES ONLY - no contracts, no interim, no freelance
 
 JOB TO ANALYZE:
 Title: {job.get('title', 'Unknown')}
