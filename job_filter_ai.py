@@ -254,40 +254,62 @@ def score_job_with_ai(job: dict, cv: str, config: dict) -> dict:
 
     min_score = config.get('min_score', 7)
 
-    prompt = f"""You are a job matching expert. Analyze if this job is a good match for the candidate.
+    prompt = f"""You are a job matching expert. Analyze if this job matches the candidate's target role criteria.
 
-CANDIDATE TARGET ROLE:
-- Manager-of-Managers: Must manage Engineering Managers, not just ICs
-- 30+ engineers in org, multiple teams
-- Director/Head of Engineering level (NOT Team Lead, NOT single team)
-- Larger companies or established scale-ups (NOT early-stage startups)
-- Software product development background (NOT infrastructure, NOT data engineering, NOT security/network)
+TARGET ROLES:
+- Titles: Head of Engineering, Director of Engineering, VP Engineering, Senior Engineering Manager (only if manager-of-managers)
+- Scope: Engineering managers as direct reports, OR 25+ engineers, OR multiple teams (3+ squads)
+- Reports to: VP, CTO, CEO, or C-level
+- Focus: Strategic leadership, team building, hiring, delivery governance, stakeholder management, engineering culture
 
-AUTOMATIC REJECTION (score 1-4):
-- "Hands-on" or "coding expected" in description
-- Single team leadership
-- Early-stage startup (<50 employees)
-- Wrong domain: Security Engineering, Network Engineering, Data Engineering, DevOps/SRE, Platform/Infrastructure
-- IC role disguised as leadership
-- Team Lead or Tech Lead level (below Director)
+ACCEPT SIGNALS (look for these):
+- "Manager of managers" or "lead engineering managers"
+- "50+ engineers" or "multiple teams"
+- "Shape engineering strategy", "Partner with Product/CTO"
+- Software product development, SaaS, platform engineering
+- CI/CD, DevOps, release management, SDLC ownership
+- Agile transformation, engineering process improvement
+- Quality engineering, test strategy at leadership level
+- Cross-functional collaboration with Product, Design, Delivery
+- Distributed/global engineering teams
+- ISO compliance, audit readiness, quality governance (bonus)
+- Safety-critical, regulated, or high-reliability software (bonus)
+- Salary £90K+ or unlisted
 
-SCORING (1-10):
-- 9-10: Perfect match - Director+ level, manager-of-managers, software product org, 30+ engineers
-- 7-8: Good match - Director level, larger org, minimal hands-on expectations
-- 5-6: Partial match - right level but some concerns (startup size, some hands-on)
-- 1-4: Poor match - fails any automatic rejection criteria above
+REJECT SIGNALS (automatic low score 1-4):
+- "Hands-on", "player-coach", "contributing code", "writing code", "stay technical"
+- "30% coding" or any coding percentage mentioned
+- Single team/squad (5-12 engineers only)
+- Early-stage startup under 20 total employees
+- Titles: Team Lead, Tech Lead, Staff Engineer, Principal Engineer, IC roles
+- QA Operations, Customer Operations, IT Support, Unified Communications, ITIL, ServiceNow
+- Pharma/medical device validation (not software engineering)
+- Network Security, Infrastructure Engineering, Platform Engineer (IC)
+- Requires deep expertise in specific tech stack as PRIMARY qualification
 
-CANDIDATE CV:
-{cv[:3000]}
+CANDIDATE BACKGROUND:
+- 15+ years software engineering, 8+ years leading engineering teams, 5 years manager-of-managers
+- Scaled software teams 4 to 16 across UK, India, Japan with 100% UK retention
+- Full SDLC ownership: delivery, release governance, CI/CD, quality strategy
+- Transformed release cycles from months to days, reduced defects 90%
+- Agile transformation, engineering process improvement, metrics-driven delivery
+- ISO 9001/27001 compliance, zero audit findings over 5+ years
+- Experience in safety-critical software (automotive, aerospace, defence)
+- Based in Surrey UK, target salary £90K-£100K+
 
 JOB TO ANALYZE:
 Title: {job.get('title', 'Unknown')}
 Company: {job.get('company', 'Unknown')}
 Location: {job.get('location', 'Unknown')}
-Remote: {job.get('remote_type', 'Unknown')}
-Description: {job.get('description', '')[:2000]}
+Description: {job.get('description', '')[:2500]}
 
-Return ONLY a JSON object (no markdown, no explanation, just the JSON):
+SCORING:
+- 9-10: Perfect match - all accept signals, no reject signals, manager-of-managers scope
+- 7-8: Good match - most accept signals, minimal concerns
+- 5-6: Partial match - some accept signals but concerns present
+- 1-4: Reject - any reject signal present, wrong level/domain/scope
+
+Return ONLY a JSON object (no markdown, no explanation):
 {{"score": <1-10>, "match": <true if score >= {min_score} else false>, "reasons": ["reason1", "reason2"]}}"""
 
     use_llama_cli = config.get('use_llama_cli', False)
