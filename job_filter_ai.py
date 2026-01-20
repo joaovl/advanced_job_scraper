@@ -618,9 +618,9 @@ def create_excel_report(results: list, output_file: Path):
     )
 
     # Headers for all sheets
-    headers = ["Score", "Decision", "Company", "Job Title", "Location", "Department",
-               "Remote Type", "Description", "AI Reason", "Apply Link"]
-    col_widths = [8, 12, 20, 45, 25, 20, 15, 80, 50, 12]
+    headers = ["Score", "Decision", "Company", "Job Title", "Location",
+               "Rejection Reason", "Apply Link"]
+    col_widths = [8, 12, 25, 45, 30, 60, 12]
 
     def setup_sheet(ws, title, jobs_list):
         """Setup a worksheet with jobs data."""
@@ -679,34 +679,15 @@ def create_excel_report(results: list, output_file: Path):
             cell.border = thin_border
             cell.alignment = wrap_alignment
 
-            # Department
-            cell = ws.cell(row=row_idx, column=6, value=job.get('department', ''))
-            cell.fill = row_fill
-            cell.border = thin_border
-            cell.alignment = wrap_alignment
-
-            # Remote Type
-            cell = ws.cell(row=row_idx, column=7, value=job.get('remote_type', ''))
-            cell.fill = row_fill
-            cell.border = thin_border
-            cell.alignment = center_alignment
-
-            # Description (truncate for Excel cell limit)
-            desc = job.get('description', '')[:5000] if job.get('description') else ''
-            cell = ws.cell(row=row_idx, column=8, value=desc)
-            cell.fill = row_fill
-            cell.border = thin_border
-            cell.alignment = wrap_alignment
-
-            # AI Reason
-            cell = ws.cell(row=row_idx, column=9, value=job.get('reason', ''))
+            # Rejection Reason
+            cell = ws.cell(row=row_idx, column=6, value=job.get('reason', ''))
             cell.fill = row_fill
             cell.border = thin_border
             cell.alignment = wrap_alignment
 
             # Apply Link (clickable)
             url = job.get('url', '')
-            cell = ws.cell(row=row_idx, column=10, value="Apply" if url else "")
+            cell = ws.cell(row=row_idx, column=7, value="Apply" if url else "")
             if url:
                 cell.hyperlink = url
                 cell.font = link_font
