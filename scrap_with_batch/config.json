@@ -9,7 +9,9 @@
     "Director of Quality",
     "VP Engineering"
   ],
+  "geo_id": "90009496",
   "location": "London, UK",
+  "easy_apply": false,
   "time_range": "48h",
   "max_jobs_total": 1000,
   "debug_mode": true,
@@ -174,7 +176,7 @@
   ],
   "must_have": [],
   "min_score": 7,
-  "max_jobs_per_title": 300,
+  "max_jobs_per_title": 0,
   "parallel_jobs": 1,
   "ollama_model": "qwen2.5:7b",
   "ollama_url": "http://localhost:11434",

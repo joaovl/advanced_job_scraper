@@ -120,8 +120,6 @@ class LinkedInConfig:
     SEARCH_DELAY = 8.0        # Delay between different keyword searches
     SEQUENTIAL_DELAY = 3.0    # Delay when in sequential mode (after rate limit)
 
-    MAX_LINKEDIN_JOBS = 1000
-
     HEADERS = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -173,17 +171,42 @@ class LinkedInScraper:
                 logger.warning(f"Could not load existing jobs: {e}")
         return existing
 
-    def _build_search_url(self, keywords: str, location: str, start: int = 0,
-                          time_range_seconds: Optional[int] = None) -> str:
-        """Build LinkedIn search URL"""
-        params = {
-            "keywords": keywords,
-            "location": location,
-            "start": start,
-        }
+    def _build_search_url(self, keywords: str, start: int = 0,
+                          time_range_seconds: Optional[int] = None,
+                          geo_id: Optional[str] = None,
+                          location: Optional[str] = None,
+                          easy_apply: bool = False) -> str:
+        """Build LinkedIn search URL.
+
+        Args:
+            keywords: Job search keywords
+            start: Pagination offset
+            time_range_seconds: Time filter in seconds (e.g., 172800 for 48h)
+            geo_id: LinkedIn geoId for location (preferred)
+                Common geoIds:
+                - Greater London Area: 90009496
+                - London (city): 102257491
+                - United Kingdom: 101165590
+            location: Text location (deprecated, use geo_id instead)
+            easy_apply: Filter for Easy Apply jobs only (f_EA=true)
+        """
+        params = {"keywords": keywords, "start": start}
+
+        # Prefer geoId over text location
+        if geo_id:
+            params["geoId"] = geo_id
+        elif location:
+            params["location"] = location  # Fallback (deprecated)
+
         base = f"{LinkedInConfig.BASE_URL}?{'&'.join(f'{k}={quote(str(v))}' for k, v in params.items())}"
+
         if time_range_seconds and int(time_range_seconds) > 0:
             base = base + f"&f_TPR=r{int(time_range_seconds)}"
+
+        # Easy Apply filter
+        if easy_apply:
+            base = base + "&f_AL=true"
+
         return base
 
     def _clean_job_url(self, url: str) -> str:
@@ -453,11 +476,14 @@ class LinkedInScraper:
 
         return job
 
-    def _fetch_page_jobs(self, keywords: str, location: str, start: int,
+    def _fetch_page_jobs(self, keywords: str, start: int,
                          time_range_seconds: Optional[int] = None,
+                         geo_id: Optional[str] = None,
+                         location: Optional[str] = None,
+                         easy_apply: bool = False,
                          skip_promoted: bool = True) -> tuple[List[JobData], int]:
         """Fetch jobs from a single search page. Returns (jobs, promoted_count)."""
-        url = self._build_search_url(keywords, location, start, time_range_seconds)
+        url = self._build_search_url(keywords, start, time_range_seconds, geo_id, location, easy_apply)
         soup = self._fetch_page(url)
 
         if not soup:
@@ -476,23 +502,32 @@ class LinkedInScraper:
                 promoted_count += 1
         return jobs, promoted_count
 
-    def scrape_jobs(self, keywords: str, location: str,
+    def scrape_jobs(self, keywords: str,
+                    geo_id: Optional[str] = None,
+                    location: Optional[str] = None,
                     max_jobs: Optional[int] = None,
                     fetch_description: bool = True,
                     time_range_seconds: Optional[int] = None,
                     existing_urls: Optional[Set[str]] = None,
-                    skip_promoted: bool = True) -> List[JobData]:
+                    skip_promoted: bool = True,
+                    easy_apply: bool = False) -> List[JobData]:
         """
         Scrape LinkedIn jobs matching criteria.
 
         Args:
             keywords: Job search keywords
-            location: Location to search
-            max_jobs: Maximum jobs to fetch (None = all available)
+            geo_id: LinkedIn geoId for location (preferred)
+                Common geoIds:
+                - Greater London Area: 90009496
+                - London (city): 102257491
+                - United Kingdom: 101165590
+            location: Text location (deprecated, use geo_id instead)
+            max_jobs: Maximum jobs to fetch (None or 0 = unlimited)
             fetch_description: Whether to fetch full descriptions
             time_range_seconds: Only jobs posted within this time range
             existing_urls: Set of URLs to skip (already scraped)
             skip_promoted: Whether to skip promoted/sponsored job listings
+            easy_apply: Filter for Easy Apply jobs only
 
         Returns:
             List of JobData objects
@@ -502,20 +537,26 @@ class LinkedInScraper:
         skipped_count = 0
         total_promoted_skipped = 0
 
-        target = max_jobs if max_jobs else LinkedInConfig.MAX_LINKEDIN_JOBS
+        # None or 0 means unlimited
+        target = max_jobs if max_jobs else None
         consecutive_empty = 0
         max_consecutive_empty = 3
 
-        logger.info(f"Searching LinkedIn for: {keywords} in {location}")
-        logger.info(f"Target: {max_jobs or 'ALL'} jobs")
-        logger.info(f"Skip promoted jobs: {skip_promoted}")
+        location_str = f"geoId={geo_id}" if geo_id else location or "unspecified"
+        logger.info(f"Searching LinkedIn for: {keywords} in {location_str}")
+        logger.info(f"Target: {max_jobs if max_jobs else 'UNLIMITED'} jobs")
+        logger.info(f"Skip promoted: {skip_promoted}, Easy Apply: {easy_apply}")
         if existing_urls:
             logger.info(f"Will skip {len(existing_urls)} existing jobs")
 
         page_idx = 0
 
         # Sequential page fetching with delays
-        while len(all_jobs) < target and consecutive_empty < max_consecutive_empty:
+        while consecutive_empty < max_consecutive_empty:
+            # Check if we've reached the target (if set)
+            if target and len(all_jobs) >= target:
+                break
+
             start = page_idx * LinkedInConfig.JOBS_PER_PAGE
 
             # Add delay between pages
@@ -523,7 +564,9 @@ class LinkedInScraper:
                 delay = random.uniform(0.5, 1.5)
                 time.sleep(delay)
 
-            page_jobs, promoted_count = self._fetch_page_jobs(keywords, location, start, time_range_seconds, skip_promoted)
+            page_jobs, promoted_count = self._fetch_page_jobs(
+                keywords, start, time_range_seconds, geo_id, location, easy_apply, skip_promoted
+            )
             total_promoted_skipped += promoted_count
 
             if page_jobs:
@@ -559,10 +602,6 @@ class LinkedInScraper:
 
         promoted_msg = f", {total_promoted_skipped} promoted" if total_promoted_skipped > 0 else ""
         logger.info(f"Found {len(all_jobs)} new unique jobs (skipped {skipped_count} existing{promoted_msg})")
-
-        # Trim to max
-        if max_jobs and len(all_jobs) > max_jobs:
-            all_jobs = all_jobs[:max_jobs]
 
         # Fetch descriptions with parallel workers (switches to sequential if rate limited)
         if fetch_description and all_jobs:
@@ -699,9 +738,12 @@ def load_config() -> Dict:
 def main():
     parser = argparse.ArgumentParser(description="LinkedIn Job Scraper")
     parser.add_argument("-k", "--keywords", help="Search keywords")
-    parser.add_argument("-l", "--location", help="Location (default: from config)")
+    parser.add_argument("-g", "--geo-id",
+                        help="LinkedIn geoId for location (e.g., 90009496 for Greater London)")
+    parser.add_argument("-l", "--location",
+                        help="Text location - DEPRECATED, use --geo-id instead")
     parser.add_argument("-n", "--max-jobs", type=int, default=0,
-                        help="Max jobs per search (0 = all)")
+                        help="Max jobs per search (0 = unlimited, scrape all)")
     parser.add_argument("-t", "--time-range", help="Time filter: 2h, 6h, 24h, 48h, 7d, 30d")
     parser.add_argument("--max-age", help="Local filter: only keep jobs posted within this time (e.g., 2h, 6h, 12h)")
     parser.add_argument("-a", "--all-titles", action="store_true",
@@ -715,6 +757,8 @@ def main():
                         help="Don't merge with existing file (overwrite)")
     parser.add_argument("--include-promoted", action="store_true",
                         help="Include promoted/sponsored job listings (excluded by default)")
+    parser.add_argument("--easy-apply", action="store_true",
+                        help="Only Easy Apply jobs (typically fewer applicants)")
 
     args = parser.parse_args()
     config = load_config()
@@ -728,11 +772,23 @@ def main():
     # Load existing jobs to skip
     existing_urls = scraper.load_existing_jobs(output_file)
 
-    # Get settings
+    # Get settings - prefer geo_id over location
+    geo_id = args.geo_id or config.get("geo_id")
     location = args.location or config.get("location", "London, UK")
+
+    # Warn about deprecated --location if used without --geo-id
+    if args.location and not args.geo_id:
+        logger.warning("--location is deprecated. Use --geo-id instead (e.g., -g 90009496 for Greater London)")
+
     time_range = args.time_range or config.get("time_range", "48h")
     time_range_seconds = parse_time_range(time_range)
-    max_jobs = args.max_jobs if args.max_jobs > 0 else config.get("max_jobs_per_title", 50)
+
+    # 0 means unlimited (None)
+    max_jobs = args.max_jobs if args.max_jobs > 0 else config.get("max_jobs_per_title", 0)
+    if max_jobs == 0:
+        max_jobs = None  # Truly unlimited
+
+    easy_apply = args.easy_apply or config.get("easy_apply", False)
 
     all_jobs = []
 
@@ -746,12 +802,14 @@ def main():
 
             jobs = scraper.scrape_jobs(
                 keywords=title,
-                location=location,
+                geo_id=geo_id,
+                location=location if not geo_id else None,
                 max_jobs=max_jobs,
                 fetch_description=not args.no_description,
                 time_range_seconds=time_range_seconds,
                 existing_urls=existing_urls,
-                skip_promoted=not args.include_promoted
+                skip_promoted=not args.include_promoted,
+                easy_apply=easy_apply
             )
 
             all_jobs.extend(jobs)
@@ -771,12 +829,14 @@ def main():
         # Single keyword search
         all_jobs = scraper.scrape_jobs(
             keywords=args.keywords,
-            location=location,
+            geo_id=geo_id,
+            location=location if not geo_id else None,
             max_jobs=max_jobs,
             fetch_description=not args.no_description,
             time_range_seconds=time_range_seconds,
             existing_urls=existing_urls,
-            skip_promoted=not args.include_promoted
+            skip_promoted=not args.include_promoted,
+            easy_apply=easy_apply
         )
     else:
         logger.error("Please specify --keywords or --all-titles")

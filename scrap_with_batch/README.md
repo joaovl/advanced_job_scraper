@@ -119,31 +119,47 @@ python job_gui.py
 
 ### LinkedIn Scraper
 ```bash
-# All job titles from config
+# All job titles from config (unlimited scraping)
 python linkedin_scraper.py -a
 
-# Specific keywords
-python linkedin_scraper.py -k "Engineering Manager" -l "London, UK"
+# With geoId (recommended for accurate location filtering)
+python linkedin_scraper.py -k "Engineering Manager" -g 90009496 -t 48h
 
-# With options
-python linkedin_scraper.py -k "Head of QA" -n 100 -t 24h
+# Easy Apply jobs only (typically fewer applicants)
+python linkedin_scraper.py -a -g 90009496 --easy-apply
+
+# With limit (if you want one)
+python linkedin_scraper.py -k "Head of Engineering" -g 90009496 -n 100
 
 # Skip fetching descriptions (faster)
 python linkedin_scraper.py -a --no-description
+
+# Old way with text location (deprecated)
+python linkedin_scraper.py -k "Engineering Manager" -l "London, UK"
 ```
 
 #### Options
 | Option | Description |
 |--------|-------------|
 | `-k, --keywords` | Search keywords |
-| `-l, --location` | Location (default: from config) |
-| `-n, --max-jobs` | Max jobs per search (0 = all) |
+| `-g, --geo-id` | LinkedIn geoId for location (recommended) |
+| `-l, --location` | Text location (deprecated, use --geo-id) |
+| `-n, --max-jobs` | Max jobs per search (0 = unlimited) |
 | `-t, --time-range` | Time filter: 24h, 48h, 7d |
 | `-a, --all-titles` | Search all titles from config |
+| `--easy-apply` | Only Easy Apply jobs (fewer applicants) |
 | `-nd, --no-description` | Skip descriptions (faster) |
 | `-w, --workers` | Parallel threads (default: 2, use 1 for safest) |
 | `-o, --output` | Output filename |
 | `--no-merge` | Don't merge with existing file |
+| `--include-promoted` | Include promoted/sponsored listings |
+
+#### Common geoIds
+| Location | geoId |
+|----------|-------|
+| Greater London Area | 90009496 |
+| London (city) | 102257491 |
+| United Kingdom | 101165590 |
 
 ### Fintech Scraper
 ```bash
