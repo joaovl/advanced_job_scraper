@@ -1,0 +1,73 @@
+Target Roles
+Titles include: Head of Engineering, Director of Engineering, VP Engineering, Senior Engineering Manager, CTO, chief technology (or technical) officer, and others, Quality Manager (or Senior), Test Manager (or Senior), Head of Test, Head of Quality, and others related
+Scope: Engineering managers as direct reports, or 5+ engineers, or multiple teams (1+ squads)
+Reports to: VP, CTO, CEO, or C-level, director
+Focus: Strategic leadership, team building, hiring, delivery governance, stakeholder management, engineering culture, software delivery excellence
+
+Accept signals, include:
+"Manager of managers" or "lead engineering managers"
+"50+ engineers" or "multiple teams"
+"Shape engineering strategy"
+"Partner with Product/CTO"
+Software product development, SaaS, platform engineering
+CI/CD, DevOps, release management, SDLC ownership
+Agile transformation, engineering process improvement
+Quality engineering, test strategy at leadership level
+Cross-functional collaboration with Product, Design, Delivery
+Distributed/global engineering teams
+ISO compliance, audit readiness, quality governance (bonus)
+Safety-critical, regulated, or high-reliability software (bonus)
+Salary £90K+ or unlisted
+
+Reject signals
+"Hands-on" more than 20%, "player-coach", "contributing code", "writing code", 
+"30%+ coding" or any coding percentage
+Early-stage startup under 10 total employees
+Titles: Team Lead, Tech Lead, Staff Engineer, Principal Engineer, IC, tester
+QA Operations, Customer Operations, IT Support, Unified Communications, ITIL, ServiceNow
+Pharma/medical device validation (not software engineering)
+Requires deep expertise in specific tech stack as primary qualification
+anything not specific to software development or software delivery. 
+
+Poor fit indicators:
+- "Mobile-first" or "former mobile developer required"
+- "React Native", "Swift", "Kotlin" as primary stack
+- "Fintech trading systems" (different kind of regulated)
+- "Gaming", "adtech", "social media"
+- Agencies or consultancies
+
+Soft concerns (note but don't reject):
+- "Consumer scale" or "millions of users" - B2B preferred but consumer acceptable
+
+My background (for context):
+15+ years software engineering, 8+ years leading engineering teams, 5 years manager-of-managers
+Scaled software teams 4 to 16 across UK, India, Japan with 100% UK retention
+Full SDLC ownership: delivery, release governance, CI/CD, quality strategy
+Transformed release cycles from months to days, reduced defects 90%
+Agile transformation, engineering process improvement, metrics-driven delivery
+ISO 9001/27001 compliance, zero audit findings over 5+ years
+Experience in safety-critical software (automotive, aerospace, defence) but open to other sectors
+Available immediately, based in Surrey UK, no sponsorship needed
+Target salary: £90K-£100K+
+Technical background: C/C++ static analysis tooling, desktop applications, B2B enterprise software
+Tech stack experience: C, C++, Python, CI/CD pipelines, test automation frameworks
+NOT my background: Mobile development (iOS/Android), consumer-facing apps, React/TypeScript frontends
+Domain: Developer tools, safety-critical certification tooling, not consumer products
+Scale context: Enterprise B2B customers (Bosch, Toyota, GE Aviation), not millions of consumer users
+End-to-end SDLC ownership, release governance, go/no-go authority
+CI/CD pipelines, DevOps practices, infrastructure planning (on-prem and cloud) 
+Test strategy, release strategy, risk-based testing
+
+
+Company stage preference: 
+Scale-up or established (50-500+ employees ideal), not early-stage (<20) or massive enterprise (>5000)
+Industry fit: B2B SaaS, developer tools, enterprise software, fintech, regulated industries. Consumer apps and mobile-first companies are poor fits.
+Remote/location: Surrey-based, London commutable, hybrid preferred, fully remote acceptable
+
+Good fit examples:
+- B2B SaaS platform needing engineering leadership
+- Developer tools or infrastructure companies
+- Regulated/compliance-heavy software (not mobile)
+- Companies scaling from startup to mature process
+- Teams needing CI/CD transformation or quality improvement
+- defence and aerospace, automotive
