@@ -36,15 +36,15 @@
         header {
             background: var(--bg-card);
             border-bottom: 1px solid var(--border);
-            padding: 16px 24px;
+            padding: 12px 24px;
             display: flex;
             align-items: center;
             gap: 16px;
         }
 
         .logo {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             background: var(--primary);
             border-radius: 8px;
             display: flex;
@@ -52,129 +52,113 @@
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 18px;
+            font-size: 16px;
         }
 
         header h1 {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 600;
         }
 
-        header span {
-            color: var(--text-secondary);
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-left: auto;
+        }
+
+        .tab-btn {
+            padding: 8px 20px;
+            border: none;
+            background: transparent;
             font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
         }
 
         main {
             flex: 1;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            padding: 24px;
-            max-width: 1400px;
+            padding: 20px 24px;
+            max-width: 1600px;
             margin: 0 auto;
             width: 100%;
         }
 
-        .panel {
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Options Grid - Top Section */
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .option-card {
             background: var(--bg-card);
-            border-radius: 12px;
+            border-radius: 10px;
             border: 1px solid var(--border);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            max-height: calc(100vh - 140px);
+            padding: 16px;
         }
 
-        .panel-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            background: var(--bg-light);
-        }
-
-        .panel-header h2 {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .panel-content {
-            padding: 20px;
-            overflow-y: auto;
-            flex: 1;
-        }
-
-        .section {
-            margin-bottom: 24px;
-        }
-
-        .section:last-child {
-            margin-bottom: 0;
-        }
-
-        .section-title {
-            font-size: 12px;
+        .option-card h3 {
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-secondary);
             margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .section-title::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
+        .option-row {
+            margin-bottom: 12px;
         }
 
-        .option-group {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        .option-row:last-child {
+            margin-bottom: 0;
         }
 
-        .option {
-            display: grid;
-            grid-template-columns: 140px 1fr;
-            gap: 12px;
-            align-items: start;
-        }
-
-        .option-label {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .option-label label {
-            font-size: 14px;
+        .option-row label {
+            display: block;
+            font-size: 13px;
             font-weight: 500;
-            cursor: pointer;
+            margin-bottom: 4px;
         }
 
-        .option-label .flag {
-            font-size: 11px;
+        .option-row .flag {
+            font-size: 10px;
             color: var(--primary);
             font-family: 'Monaco', 'Consolas', monospace;
-        }
-
-        .option-input {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
         }
 
         input[type="text"],
         input[type="number"],
         select {
             width: 100%;
-            padding: 8px 12px;
+            padding: 7px 10px;
             border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 14px;
+            border-radius: 5px;
+            font-size: 13px;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
 
@@ -183,83 +167,45 @@
         select:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+            box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.1);
         }
 
         input[type="text"]::placeholder {
             color: #999;
         }
 
-        .help-text {
-            font-size: 12px;
-            color: var(--text-secondary);
-            line-height: 1.4;
-        }
-
-        .checkbox-option {
+        .checkbox-row {
             display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s, border-color 0.2s;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
         }
 
-        .checkbox-option:hover {
-            background: var(--bg-light);
-        }
-
-        .checkbox-option.active {
-            border-color: var(--primary);
-            background: rgba(10, 102, 194, 0.05);
-        }
-
-        .checkbox-option input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            margin-top: 2px;
+        .checkbox-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
             cursor: pointer;
             accent-color: var(--primary);
         }
 
-        .checkbox-content {
-            flex: 1;
-        }
-
-        .checkbox-content .title {
-            font-size: 14px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .checkbox-content .flag {
-            font-size: 11px;
-            color: var(--primary);
-            font-family: 'Monaco', 'Consolas', monospace;
-        }
-
-        .checkbox-content .desc {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-top: 4px;
+        .checkbox-row label {
+            margin-bottom: 0;
+            cursor: pointer;
+            font-size: 13px;
         }
 
         .geoid-presets {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             margin-top: 6px;
             flex-wrap: wrap;
         }
 
         .preset-btn {
-            padding: 4px 10px;
-            font-size: 12px;
+            padding: 3px 8px;
+            font-size: 11px;
             border: 1px solid var(--border);
-            border-radius: 4px;
+            border-radius: 3px;
             background: var(--bg-light);
             cursor: pointer;
             transition: all 0.2s;
@@ -276,51 +222,66 @@
             border-color: var(--primary);
         }
 
-        /* Command Output Panel */
+        /* Bottom Section - Command + Help */
+        .bottom-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .command-panel {
+            background: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 16px;
+        }
+
+        .command-panel h3 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
         .command-output {
             background: #1e1e1e;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
+            border-radius: 6px;
+            padding: 14px;
+            margin-bottom: 12px;
+            min-height: 60px;
         }
 
         .command-output pre {
             font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
-            font-size: 14px;
+            font-size: 13px;
             color: #d4d4d4;
             white-space: pre-wrap;
             word-break: break-all;
-            line-height: 1.6;
+            line-height: 1.5;
         }
 
-        .command-output .cmd {
-            color: #569cd6;
-        }
-
-        .command-output .flag {
-            color: #9cdcfe;
-        }
-
-        .command-output .value {
-            color: #ce9178;
-        }
+        .command-output .cmd { color: #569cd6; }
+        .command-output .flag { color: #9cdcfe; }
+        .command-output .value { color: #ce9178; }
 
         .actions {
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
 
         .btn {
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
             border: none;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .btn-primary {
@@ -342,51 +303,46 @@
             background: var(--border);
         }
 
-        .copy-feedback {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--success);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 500;
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 1000;
-        }
-
-        .copy-feedback.show {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
-        }
-
         /* Help Panel */
-        .help-section {
-            background: var(--bg-light);
-            border-radius: 8px;
+        .help-panel {
+            background: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border);
             padding: 16px;
-            margin-top: 16px;
         }
 
-        .help-section h3 {
-            font-size: 14px;
+        .help-panel h3 {
+            font-size: 11px;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
             margin-bottom: 12px;
+        }
+
+        .help-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .help-section h4 {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
             color: var(--text-primary);
         }
 
         .help-section table {
             width: 100%;
-            font-size: 12px;
+            font-size: 11px;
             border-collapse: collapse;
         }
 
         .help-section th,
         .help-section td {
             text-align: left;
-            padding: 6px 8px;
+            padding: 4px 6px;
             border-bottom: 1px solid var(--border);
         }
 
@@ -397,27 +353,199 @@
 
         .help-section code {
             background: #e8e8e8;
-            padding: 2px 6px;
+            padding: 1px 4px;
             border-radius: 3px;
             font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 11px;
+            font-size: 10px;
+        }
+
+        .copy-feedback {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--success);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 13px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .copy-feedback.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
         }
 
         .deprecated {
             color: var(--warning);
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 500;
             text-transform: uppercase;
+            margin-left: 4px;
+        }
+
+        /* Config Editor Tab */
+        .config-layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        .config-editor-panel {
+            background: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .config-editor-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-light);
+        }
+
+        .config-editor-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .config-editor-header .actions {
+            margin-left: auto;
+        }
+
+        .config-textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            padding: 16px;
+            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            resize: none;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+
+        .config-textarea:focus {
+            outline: none;
+        }
+
+        .config-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .config-section {
+            background: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 16px;
+        }
+
+        .config-section h4 {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .config-section p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .file-upload {
+            border: 2px dashed var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-upload:hover {
+            border-color: var(--primary);
+            background: rgba(10, 102, 194, 0.02);
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .file-upload-text strong {
+            color: var(--primary);
+        }
+
+        .quick-add {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .quick-add input {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .quick-add .btn {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .config-status {
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .config-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .config-status.error {
+            background: #f8d7da;
+            color: #721c24;
         }
 
         /* Responsive */
-        @media (max-width: 1024px) {
-            main {
+        @media (max-width: 1200px) {
+            .options-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .options-grid {
                 grid-template-columns: 1fr;
             }
-
-            .panel {
-                max-height: none;
+            .bottom-section {
+                grid-template-columns: 1fr;
+            }
+            .help-grid {
+                grid-template-columns: 1fr;
+            }
+            .config-layout {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -425,317 +553,283 @@
 <body>
     <header>
         <div class="logo">Li</div>
-        <div>
-            <h1>LinkedIn Scraper</h1>
-            <span>Command Builder</span>
+        <h1>LinkedIn Scraper</h1>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="builder">Command Builder</button>
+            <button class="tab-btn" data-tab="config">Config Editor</button>
         </div>
     </header>
 
     <main>
-        <div class="panel">
-            <div class="panel-header">
-                <h2>Options</h2>
-            </div>
-            <div class="panel-content">
+        <!-- Command Builder Tab -->
+        <div class="tab-content active" id="builder-tab">
+            <!-- Options Grid -->
+            <div class="options-grid">
                 <!-- Search Options -->
-                <div class="section">
-                    <div class="section-title">Search Options</div>
-                    <div class="option-group">
-                        <div class="option">
-                            <div class="option-label">
-                                <label for="keywords">Keywords</label>
-                                <span class="flag">-k, --keywords</span>
-                            </div>
-                            <div class="option-input">
-                                <input type="text" id="keywords" placeholder="e.g., Engineering Manager">
-                                <span class="help-text">Job title or search terms</span>
-                            </div>
+                <div class="option-card">
+                    <h3>Search</h3>
+                    <div class="option-row">
+                        <label>Keywords <span class="flag">-k</span></label>
+                        <input type="text" id="keywords" placeholder="e.g., Engineering Manager">
+                    </div>
+                    <div class="option-row">
+                        <label>Geo ID <span class="flag">-g</span></label>
+                        <input type="text" id="geo-id" placeholder="e.g., 90009496">
+                        <div class="geoid-presets">
+                            <button class="preset-btn" data-geoid="90009496">Greater London</button>
+                            <button class="preset-btn" data-geoid="102257491">London City</button>
+                            <button class="preset-btn" data-geoid="101165590">UK</button>
                         </div>
-
-                        <div class="option">
-                            <div class="option-label">
-                                <label for="geo-id">Geo ID</label>
-                                <span class="flag">-g, --geo-id</span>
-                            </div>
-                            <div class="option-input">
-                                <input type="text" id="geo-id" placeholder="e.g., 90009496">
-                                <div class="geoid-presets">
-                                    <button class="preset-btn" data-geoid="90009496">Greater London</button>
-                                    <button class="preset-btn" data-geoid="102257491">London City</button>
-                                    <button class="preset-btn" data-geoid="101165590">United Kingdom</button>
-                                </div>
-                                <span class="help-text">LinkedIn geoId for precise location filtering (recommended)</span>
-                            </div>
-                        </div>
-
-                        <div class="option">
-                            <div class="option-label">
-                                <label for="location">Location <span class="deprecated">Deprecated</span></label>
-                                <span class="flag">-l, --location</span>
-                            </div>
-                            <div class="option-input">
-                                <input type="text" id="location" placeholder="e.g., London, UK">
-                                <span class="help-text">Text location (use --geo-id instead for accuracy)</span>
-                            </div>
-                        </div>
+                    </div>
+                    <div class="option-row">
+                        <label>Location <span class="flag">-l</span><span class="deprecated">Deprecated</span></label>
+                        <input type="text" id="location" placeholder="e.g., London, UK">
                     </div>
                 </div>
 
                 <!-- Filters -->
-                <div class="section">
-                    <div class="section-title">Filters</div>
-                    <div class="option-group">
-                        <div class="option">
-                            <div class="option-label">
-                                <label for="time-range">Time Range</label>
-                                <span class="flag">-t, --time-range</span>
-                            </div>
-                            <div class="option-input">
-                                <select id="time-range">
-                                    <option value="">Default (from config)</option>
-                                    <option value="2h">Last 2 hours</option>
-                                    <option value="6h">Last 6 hours</option>
-                                    <option value="24h">Last 24 hours</option>
-                                    <option value="48h">Last 48 hours</option>
-                                    <option value="7d">Last 7 days</option>
-                                    <option value="30d">Last 30 days</option>
-                                </select>
-                                <span class="help-text">Only jobs posted within this time frame</span>
-                            </div>
-                        </div>
-
-                        <div class="option">
-                            <div class="option-label">
-                                <label for="max-jobs">Max Jobs</label>
-                                <span class="flag">-n, --max-jobs</span>
-                            </div>
-                            <div class="option-input">
-                                <input type="number" id="max-jobs" placeholder="0 = unlimited" min="0">
-                                <span class="help-text">Maximum jobs per search (0 = scrape all available)</span>
-                            </div>
-                        </div>
-
-                        <div class="option">
-                            <div class="option-label">
-                                <label for="max-age">Max Age</label>
-                                <span class="flag">--max-age</span>
-                            </div>
-                            <div class="option-input">
-                                <input type="text" id="max-age" placeholder="e.g., 12h">
-                                <span class="help-text">Local filter: only keep jobs posted within this time</span>
-                            </div>
-                        </div>
-
-                        <label class="checkbox-option" id="all-titles-option">
-                            <input type="checkbox" id="all-titles">
-                            <div class="checkbox-content">
-                                <div class="title">All Titles <span class="flag">-a, --all-titles</span></div>
-                                <div class="desc">Search all job titles from config.json instead of single keyword</div>
-                            </div>
-                        </label>
-
-                        <label class="checkbox-option" id="easy-apply-option">
-                            <input type="checkbox" id="easy-apply">
-                            <div class="checkbox-content">
-                                <div class="title">Easy Apply <span class="flag">--easy-apply</span></div>
-                                <div class="desc">Only show Easy Apply jobs (typically fewer applicants)</div>
-                            </div>
-                        </label>
-
-                        <label class="checkbox-option" id="include-promoted-option">
-                            <input type="checkbox" id="include-promoted">
-                            <div class="checkbox-content">
-                                <div class="title">Include Promoted <span class="flag">--include-promoted</span></div>
-                                <div class="desc">Include promoted/sponsored job listings (excluded by default)</div>
-                            </div>
-                        </label>
+                <div class="option-card">
+                    <h3>Filters</h3>
+                    <div class="option-row">
+                        <label>Time Range <span class="flag">-t</span></label>
+                        <select id="time-range">
+                            <option value="">Default (config)</option>
+                            <option value="2h">Last 2 hours</option>
+                            <option value="6h">Last 6 hours</option>
+                            <option value="24h">Last 24 hours</option>
+                            <option value="48h">Last 48 hours</option>
+                            <option value="7d">Last 7 days</option>
+                            <option value="30d">Last 30 days</option>
+                        </select>
+                    </div>
+                    <div class="option-row">
+                        <label>Max Jobs <span class="flag">-n</span></label>
+                        <input type="number" id="max-jobs" placeholder="0 = unlimited" min="0">
+                    </div>
+                    <div class="option-row">
+                        <label>Max Age <span class="flag">--max-age</span></label>
+                        <input type="text" id="max-age" placeholder="e.g., 12h">
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="all-titles">
+                        <label for="all-titles">All Titles <span class="flag">-a</span></label>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="easy-apply">
+                        <label for="easy-apply">Easy Apply <span class="flag">--easy-apply</span></label>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="include-promoted">
+                        <label for="include-promoted">Include Promoted <span class="flag">--include-promoted</span></label>
                     </div>
                 </div>
 
                 <!-- Output Options -->
-                <div class="section">
-                    <div class="section-title">Output Options</div>
-                    <div class="option-group">
-                        <div class="option">
-                            <div class="option-label">
-                                <label for="output">Output File</label>
-                                <span class="flag">-o, --output</span>
-                            </div>
-                            <div class="option-input">
-                                <input type="text" id="output" placeholder="linkedin_jobs_YYYYMMDD.json">
-                                <span class="help-text">Custom output filename</span>
-                            </div>
-                        </div>
-
-                        <div class="option">
-                            <div class="option-label">
-                                <label for="workers">Workers</label>
-                                <span class="flag">-w, --workers</span>
-                            </div>
-                            <div class="option-input">
-                                <input type="number" id="workers" placeholder="2" min="1" max="5">
-                                <span class="help-text">Parallel threads for descriptions (1-5, default: 2)</span>
-                            </div>
-                        </div>
-
-                        <label class="checkbox-option" id="no-description-option">
-                            <input type="checkbox" id="no-description">
-                            <div class="checkbox-content">
-                                <div class="title">Skip Descriptions <span class="flag">-nd, --no-description</span></div>
-                                <div class="desc">Don't fetch job descriptions (much faster scraping)</div>
-                            </div>
-                        </label>
-
-                        <label class="checkbox-option" id="no-merge-option">
-                            <input type="checkbox" id="no-merge">
-                            <div class="checkbox-content">
-                                <div class="title">Overwrite File <span class="flag">--no-merge</span></div>
-                                <div class="desc">Don't merge with existing file (overwrite instead)</div>
-                            </div>
-                        </label>
+                <div class="option-card">
+                    <h3>Output</h3>
+                    <div class="option-row">
+                        <label>Output File <span class="flag">-o</span></label>
+                        <input type="text" id="output" placeholder="linkedin_jobs_YYYYMMDD.json">
+                    </div>
+                    <div class="option-row">
+                        <label>Workers <span class="flag">-w</span></label>
+                        <input type="number" id="workers" placeholder="2" min="1" max="5">
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="no-description">
+                        <label for="no-description">Skip Descriptions <span class="flag">-nd</span></label>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="no-merge">
+                        <label for="no-merge">Overwrite File <span class="flag">--no-merge</span></label>
                     </div>
                 </div>
 
                 <!-- AI Analysis -->
-                <div class="section">
-                    <div class="section-title">AI Analysis</div>
-                    <div class="option-group">
-                        <label class="checkbox-option" id="analyze-option">
-                            <input type="checkbox" id="analyze">
-                            <div class="checkbox-content">
-                                <div class="title">Run AI Analysis <span class="flag">--analyze</span></div>
-                                <div class="desc">Analyze jobs against your CV after scraping</div>
-                            </div>
-                        </label>
+                <div class="option-card">
+                    <h3>AI Analysis</h3>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="analyze">
+                        <label for="analyze">Run AI Analysis <span class="flag">--analyze</span></label>
+                    </div>
+                    <div class="option-row" id="ai-backend-row">
+                        <label>AI Backend</label>
+                        <select id="ai-backend">
+                            <option value="ollama">Ollama (local)</option>
+                            <option value="claude">Claude (cloud)</option>
+                        </select>
+                    </div>
+                    <div class="option-row" id="claude-model-row">
+                        <label>Claude Model <span class="flag">--claude-model</span></label>
+                        <select id="claude-model">
+                            <option value="haiku">Haiku (fast)</option>
+                            <option value="sonnet">Sonnet</option>
+                            <option value="opus">Opus</option>
+                        </select>
+                    </div>
+                    <div class="option-row" id="ollama-model-row">
+                        <label>Ollama Model <span class="flag">--ollama-model</span></label>
+                        <input type="text" id="ollama-model" placeholder="qwen2.5:7b" value="qwen2.5:7b">
+                    </div>
+                </div>
+            </div>
 
-                        <div class="option" id="ai-backend-row">
-                            <div class="option-label">
-                                <label for="ai-backend">AI Backend</label>
-                                <span class="flag">--claude / --ollama</span>
-                            </div>
-                            <div class="option-input">
-                                <select id="ai-backend">
-                                    <option value="ollama">Ollama (local, free)</option>
-                                    <option value="claude">Claude (cloud, fast)</option>
-                                </select>
-                                <span class="help-text">Choose AI backend for job analysis</span>
-                            </div>
+            <!-- Bottom Section -->
+            <div class="bottom-section">
+                <!-- Command Output -->
+                <div class="command-panel">
+                    <h3>Generated Command</h3>
+                    <div class="command-output">
+                        <pre id="command-preview"><span class="cmd">python</span> linkedin_scraper.py</pre>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="copyCommand()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            Copy
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetForm()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                <path d="M3 3v5h5"></path>
+                            </svg>
+                            Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Help Panel -->
+                <div class="help-panel">
+                    <h3>Quick Reference</h3>
+                    <div class="help-grid">
+                        <div class="help-section">
+                            <h4>Common geoIds</h4>
+                            <table>
+                                <tr><td>Greater London</td><td><code>90009496</code></td></tr>
+                                <tr><td>London (city)</td><td><code>102257491</code></td></tr>
+                                <tr><td>United Kingdom</td><td><code>101165590</code></td></tr>
+                            </table>
                         </div>
-
-                        <div class="option" id="claude-model-row">
-                            <div class="option-label">
-                                <label for="claude-model">Claude Model</label>
-                                <span class="flag">--claude-model</span>
-                            </div>
-                            <div class="option-input">
-                                <select id="claude-model">
-                                    <option value="haiku">Haiku (fast, cheap)</option>
-                                    <option value="sonnet">Sonnet (balanced)</option>
-                                    <option value="opus">Opus (most capable)</option>
-                                </select>
-                                <span class="help-text">Claude model for analysis</span>
-                            </div>
-                        </div>
-
-                        <div class="option" id="ollama-model-row">
-                            <div class="option-label">
-                                <label for="ollama-model">Ollama Model</label>
-                                <span class="flag">--ollama-model</span>
-                            </div>
-                            <div class="option-input">
-                                <input type="text" id="ollama-model" placeholder="qwen2.5:7b" value="qwen2.5:7b">
-                                <span class="help-text">Ollama model for analysis (default: qwen2.5:7b)</span>
-                            </div>
+                        <div class="help-section">
+                            <h4>Examples</h4>
+                            <table>
+                                <tr><td>All titles, 48h</td><td><code>-a -g 90009496 -t 48h</code></td></tr>
+                                <tr><td>Easy Apply only</td><td><code>-a -g 90009496 --easy-apply</code></td></tr>
+                                <tr><td>With AI (Claude)</td><td><code>-a --analyze --claude</code></td></tr>
+                                <tr><td>Fast scan</td><td><code>-a -g 90009496 -nd</code></td></tr>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="panel">
-            <div class="panel-header">
-                <h2>Generated Command</h2>
-            </div>
-            <div class="panel-content">
-                <div class="command-output">
-                    <pre id="command-preview"><span class="cmd">python</span> linkedin_scraper.py</pre>
+        <!-- Config Editor Tab -->
+        <div class="tab-content" id="config-tab">
+            <div class="config-layout">
+                <div class="config-editor-panel">
+                    <div class="config-editor-header">
+                        <h3>config.json</h3>
+                        <div class="actions">
+                            <button class="btn btn-secondary" onclick="formatConfig()">Format</button>
+                            <button class="btn btn-secondary" onclick="downloadConfig()">Download</button>
+                            <button class="btn btn-primary" onclick="saveConfigToClipboard()">Copy</button>
+                        </div>
+                    </div>
+                    <textarea class="config-textarea" id="config-editor" spellcheck="false"></textarea>
                 </div>
 
-                <div class="actions">
-                    <button class="btn btn-primary" onclick="copyCommand()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                        Copy Command
-                    </button>
-                    <button class="btn btn-secondary" onclick="resetForm()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                            <path d="M3 3v5h5"></path>
-                        </svg>
-                        Reset
-                    </button>
-                </div>
+                <div class="config-sidebar">
+                    <div class="config-section">
+                        <h4>Load Config</h4>
+                        <p>Upload your existing config.json file to edit it.</p>
+                        <label class="file-upload">
+                            <input type="file" id="config-file-input" accept=".json">
+                            <div class="file-upload-text">
+                                <strong>Click to upload</strong> or drag & drop<br>
+                                config.json
+                            </div>
+                        </label>
+                        <div id="config-status"></div>
+                    </div>
 
-                <div class="help-section">
-                    <h3>Common geoIds Reference</h3>
-                    <table>
-                        <tr>
-                            <th>Location</th>
-                            <th>geoId</th>
-                        </tr>
-                        <tr>
-                            <td>Greater London Area</td>
-                            <td><code>90009496</code></td>
-                        </tr>
-                        <tr>
-                            <td>London (city)</td>
-                            <td><code>102257491</code></td>
-                        </tr>
-                        <tr>
-                            <td>United Kingdom</td>
-                            <td><code>101165590</code></td>
-                        </tr>
-                    </table>
-                </div>
+                    <div class="config-section">
+                        <h4>Quick Add Job Title</h4>
+                        <p>Add a new job title to the search list.</p>
+                        <div class="quick-add">
+                            <input type="text" id="new-job-title" placeholder="e.g., VP Engineering">
+                            <button class="btn btn-primary" onclick="addJobTitle()">Add Title</button>
+                        </div>
+                    </div>
 
-                <div class="help-section">
-                    <h3>Quick Examples</h3>
-                    <table>
-                        <tr>
-                            <th>Use Case</th>
-                            <th>Command</th>
-                        </tr>
-                        <tr>
-                            <td>All titles, Greater London, 48h</td>
-                            <td><code>-a -g 90009496 -t 48h</code></td>
-                        </tr>
-                        <tr>
-                            <td>Easy Apply jobs only</td>
-                            <td><code>-a -g 90009496 --easy-apply</code></td>
-                        </tr>
-                        <tr>
-                            <td>Fast scan (no descriptions)</td>
-                            <td><code>-a -g 90009496 -nd</code></td>
-                        </tr>
-                        <tr>
-                            <td>Scrape + AI analysis (Claude)</td>
-                            <td><code>-a -g 90009496 --analyze --claude</code></td>
-                        </tr>
-                        <tr>
-                            <td>Scrape + AI analysis (Ollama)</td>
-                            <td><code>-a -g 90009496 --analyze</code></td>
-                        </tr>
-                    </table>
+                    <div class="config-section">
+                        <h4>Quick Add Exclusion</h4>
+                        <p>Add keyword to exclude from titles.</p>
+                        <div class="quick-add">
+                            <input type="text" id="new-exclusion" placeholder="e.g., Intern">
+                            <button class="btn btn-secondary" onclick="addExclusion()">Add Exclusion</button>
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <h4>Config Structure</h4>
+                        <table class="help-section" style="font-size: 11px;">
+                            <tr><td><code>job_titles</code></td><td>Search terms</td></tr>
+                            <tr><td><code>geo_id</code></td><td>LinkedIn location ID</td></tr>
+                            <tr><td><code>time_range</code></td><td>Default time filter</td></tr>
+                            <tr><td><code>exclude_in_title</code></td><td>Title blacklist</td></tr>
+                            <tr><td><code>exclude_in_description</code></td><td>Desc blacklist</td></tr>
+                            <tr><td><code>easy_apply</code></td><td>Easy Apply filter</td></tr>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <div class="copy-feedback" id="copy-feedback">Command copied to clipboard!</div>
+    <div class="copy-feedback" id="copy-feedback">Copied to clipboard!</div>
 
     <script>
+        // Default config template
+        const defaultConfig = {
+            "cv_file": "data/your_cv.txt",
+            "job_titles": [
+                "Head of Engineering",
+                "Director of Engineering",
+                "Senior Engineering Manager",
+                "Engineering Manager",
+                "VP Engineering"
+            ],
+            "geo_id": "90009496",
+            "location": "London, UK",
+            "easy_apply": false,
+            "time_range": "48h",
+            "max_jobs_per_title": 0,
+            "exclude_in_title": [
+                "junior",
+                "intern",
+                "graduate"
+            ],
+            "exclude_in_description": [],
+            "min_score": 7,
+            "ollama_model": "qwen2.5:7b"
+        };
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab + '-tab').classList.add('active');
+            });
+        });
+
+        // Initialize config editor with default
+        document.getElementById('config-editor').value = JSON.stringify(defaultConfig, null, 2);
+
         // All input elements
         const inputs = {
             keywords: document.getElementById('keywords'),
@@ -751,114 +845,82 @@
             workers: document.getElementById('workers'),
             noDescription: document.getElementById('no-description'),
             noMerge: document.getElementById('no-merge'),
-            // AI Analysis
             analyze: document.getElementById('analyze'),
             aiBackend: document.getElementById('ai-backend'),
             claudeModel: document.getElementById('claude-model'),
             ollamaModel: document.getElementById('ollama-model')
         };
 
-        // Checkbox option elements for styling
-        const checkboxOptions = {
-            allTitles: document.getElementById('all-titles-option'),
-            easyApply: document.getElementById('easy-apply-option'),
-            includePromoted: document.getElementById('include-promoted-option'),
-            noDescription: document.getElementById('no-description-option'),
-            noMerge: document.getElementById('no-merge-option'),
-            analyze: document.getElementById('analyze-option')
-        };
-
-        // AI option rows for show/hide
         const aiRows = {
             backend: document.getElementById('ai-backend-row'),
             claudeModel: document.getElementById('claude-model-row'),
             ollamaModel: document.getElementById('ollama-model-row')
         };
 
-        // GeoId preset buttons
         const presetButtons = document.querySelectorAll('.preset-btn');
 
-        // Build command and update preview
+        // Build command
         function buildCommand() {
             let parts = ['<span class="cmd">python</span> linkedin_scraper.py'];
 
-            // All titles flag
             if (inputs.allTitles.checked) {
                 parts.push('<span class="flag">-a</span>');
             }
 
-            // Keywords (only if not using all-titles)
             if (!inputs.allTitles.checked && inputs.keywords.value.trim()) {
-                const val = inputs.keywords.value.trim();
-                parts.push(`<span class="flag">-k</span> <span class="value">"${escapeHtml(val)}"</span>`);
+                parts.push(`<span class="flag">-k</span> <span class="value">"${escapeHtml(inputs.keywords.value.trim())}"</span>`);
             }
 
-            // Geo ID (preferred)
             if (inputs.geoId.value.trim()) {
                 parts.push(`<span class="flag">-g</span> <span class="value">${escapeHtml(inputs.geoId.value.trim())}</span>`);
-            }
-            // Location (deprecated fallback)
-            else if (inputs.location.value.trim()) {
-                const val = inputs.location.value.trim();
-                parts.push(`<span class="flag">-l</span> <span class="value">"${escapeHtml(val)}"</span>`);
+            } else if (inputs.location.value.trim()) {
+                parts.push(`<span class="flag">-l</span> <span class="value">"${escapeHtml(inputs.location.value.trim())}"</span>`);
             }
 
-            // Time range
             if (inputs.timeRange.value) {
                 parts.push(`<span class="flag">-t</span> <span class="value">${inputs.timeRange.value}</span>`);
             }
 
-            // Max jobs
             if (inputs.maxJobs.value && parseInt(inputs.maxJobs.value) > 0) {
                 parts.push(`<span class="flag">-n</span> <span class="value">${inputs.maxJobs.value}</span>`);
             }
 
-            // Max age
             if (inputs.maxAge.value.trim()) {
                 parts.push(`<span class="flag">--max-age</span> <span class="value">${escapeHtml(inputs.maxAge.value.trim())}</span>`);
             }
 
-            // Easy apply
             if (inputs.easyApply.checked) {
                 parts.push('<span class="flag">--easy-apply</span>');
             }
 
-            // Include promoted
             if (inputs.includePromoted.checked) {
                 parts.push('<span class="flag">--include-promoted</span>');
             }
 
-            // Output file
             if (inputs.output.value.trim()) {
                 parts.push(`<span class="flag">-o</span> <span class="value">"${escapeHtml(inputs.output.value.trim())}"</span>`);
             }
 
-            // Workers
             if (inputs.workers.value && parseInt(inputs.workers.value) !== 2) {
                 parts.push(`<span class="flag">-w</span> <span class="value">${inputs.workers.value}</span>`);
             }
 
-            // No description
             if (inputs.noDescription.checked) {
                 parts.push('<span class="flag">-nd</span>');
             }
 
-            // No merge
             if (inputs.noMerge.checked) {
                 parts.push('<span class="flag">--no-merge</span>');
             }
 
-            // AI Analysis
             if (inputs.analyze.checked) {
                 parts.push('<span class="flag">--analyze</span>');
-
                 if (inputs.aiBackend.value === 'claude') {
                     parts.push('<span class="flag">--claude</span>');
                     if (inputs.claudeModel.value !== 'haiku') {
                         parts.push(`<span class="flag">--claude-model</span> <span class="value">${inputs.claudeModel.value}</span>`);
                     }
                 } else {
-                    // Ollama is default, only add model if not default
                     if (inputs.ollamaModel.value.trim() && inputs.ollamaModel.value.trim() !== 'qwen2.5:7b') {
                         parts.push(`<span class="flag">--ollama-model</span> <span class="value">${escapeHtml(inputs.ollamaModel.value.trim())}</span>`);
                     }
@@ -868,69 +930,28 @@
             document.getElementById('command-preview').innerHTML = parts.join(' ');
         }
 
-        // Get plain text command for copying
         function getPlainCommand() {
             let parts = ['python linkedin_scraper.py'];
 
-            if (inputs.allTitles.checked) {
-                parts.push('-a');
-            }
+            if (inputs.allTitles.checked) parts.push('-a');
+            if (!inputs.allTitles.checked && inputs.keywords.value.trim()) parts.push(`-k "${inputs.keywords.value.trim()}"`);
+            if (inputs.geoId.value.trim()) parts.push(`-g ${inputs.geoId.value.trim()}`);
+            else if (inputs.location.value.trim()) parts.push(`-l "${inputs.location.value.trim()}"`);
+            if (inputs.timeRange.value) parts.push(`-t ${inputs.timeRange.value}`);
+            if (inputs.maxJobs.value && parseInt(inputs.maxJobs.value) > 0) parts.push(`-n ${inputs.maxJobs.value}`);
+            if (inputs.maxAge.value.trim()) parts.push(`--max-age ${inputs.maxAge.value.trim()}`);
+            if (inputs.easyApply.checked) parts.push('--easy-apply');
+            if (inputs.includePromoted.checked) parts.push('--include-promoted');
+            if (inputs.output.value.trim()) parts.push(`-o "${inputs.output.value.trim()}"`);
+            if (inputs.workers.value && parseInt(inputs.workers.value) !== 2) parts.push(`-w ${inputs.workers.value}`);
+            if (inputs.noDescription.checked) parts.push('-nd');
+            if (inputs.noMerge.checked) parts.push('--no-merge');
 
-            if (!inputs.allTitles.checked && inputs.keywords.value.trim()) {
-                parts.push(`-k "${inputs.keywords.value.trim()}"`);
-            }
-
-            if (inputs.geoId.value.trim()) {
-                parts.push(`-g ${inputs.geoId.value.trim()}`);
-            } else if (inputs.location.value.trim()) {
-                parts.push(`-l "${inputs.location.value.trim()}"`);
-            }
-
-            if (inputs.timeRange.value) {
-                parts.push(`-t ${inputs.timeRange.value}`);
-            }
-
-            if (inputs.maxJobs.value && parseInt(inputs.maxJobs.value) > 0) {
-                parts.push(`-n ${inputs.maxJobs.value}`);
-            }
-
-            if (inputs.maxAge.value.trim()) {
-                parts.push(`--max-age ${inputs.maxAge.value.trim()}`);
-            }
-
-            if (inputs.easyApply.checked) {
-                parts.push('--easy-apply');
-            }
-
-            if (inputs.includePromoted.checked) {
-                parts.push('--include-promoted');
-            }
-
-            if (inputs.output.value.trim()) {
-                parts.push(`-o "${inputs.output.value.trim()}"`);
-            }
-
-            if (inputs.workers.value && parseInt(inputs.workers.value) !== 2) {
-                parts.push(`-w ${inputs.workers.value}`);
-            }
-
-            if (inputs.noDescription.checked) {
-                parts.push('-nd');
-            }
-
-            if (inputs.noMerge.checked) {
-                parts.push('--no-merge');
-            }
-
-            // AI Analysis
             if (inputs.analyze.checked) {
                 parts.push('--analyze');
-
                 if (inputs.aiBackend.value === 'claude') {
                     parts.push('--claude');
-                    if (inputs.claudeModel.value !== 'haiku') {
-                        parts.push(`--claude-model ${inputs.claudeModel.value}`);
-                    }
+                    if (inputs.claudeModel.value !== 'haiku') parts.push(`--claude-model ${inputs.claudeModel.value}`);
                 } else {
                     if (inputs.ollamaModel.value.trim() && inputs.ollamaModel.value.trim() !== 'qwen2.5:7b') {
                         parts.push(`--ollama-model ${inputs.ollamaModel.value.trim()}`);
@@ -941,162 +962,223 @@
             return parts.join(' ');
         }
 
-        // Escape HTML for display
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Copy command to clipboard
-        function copyCommand() {
-            const command = getPlainCommand();
-            navigator.clipboard.writeText(command).then(() => {
-                const feedback = document.getElementById('copy-feedback');
-                feedback.classList.add('show');
-                setTimeout(() => {
-                    feedback.classList.remove('show');
-                }, 2000);
-            });
+        function showFeedback(message) {
+            const feedback = document.getElementById('copy-feedback');
+            feedback.textContent = message || 'Copied to clipboard!';
+            feedback.classList.add('show');
+            setTimeout(() => feedback.classList.remove('show'), 2000);
         }
 
-        // Reset form
+        function copyCommand() {
+            navigator.clipboard.writeText(getPlainCommand()).then(() => showFeedback());
+        }
+
         function resetForm() {
             Object.values(inputs).forEach(input => {
-                if (input.type === 'checkbox') {
-                    input.checked = false;
-                } else if (input.tagName === 'SELECT') {
-                    input.selectedIndex = 0;
-                } else {
-                    input.value = '';
-                }
+                if (input.type === 'checkbox') input.checked = false;
+                else if (input.tagName === 'SELECT') input.selectedIndex = 0;
+                else input.value = '';
             });
-
-            // Reset default values
             inputs.ollamaModel.value = 'qwen2.5:7b';
-
-            // Remove active class from checkboxes
-            Object.values(checkboxOptions).forEach(opt => {
-                if (opt) opt.classList.remove('active');
-            });
-
-            // Remove active class from preset buttons
             presetButtons.forEach(btn => btn.classList.remove('active'));
-
-            // Reset AI options visibility
             updateAIOptionsVisibility();
-
             buildCommand();
         }
 
-        // Update checkbox option styling
-        function updateCheckboxStyle(checkbox, optionElement) {
-            if (checkbox.checked) {
-                optionElement.classList.add('active');
-            } else {
-                optionElement.classList.remove('active');
-            }
-        }
-
-        // Show/hide AI model options based on analyze checkbox and backend selection
         function updateAIOptionsVisibility() {
-            const analyzeEnabled = inputs.analyze.checked;
-
-            // Show/hide all AI-related rows
-            aiRows.backend.style.display = analyzeEnabled ? 'grid' : 'none';
-
-            if (analyzeEnabled) {
+            const enabled = inputs.analyze.checked;
+            aiRows.backend.style.display = enabled ? 'block' : 'none';
+            if (enabled) {
                 const isClaude = inputs.aiBackend.value === 'claude';
-                aiRows.claudeModel.style.display = isClaude ? 'grid' : 'none';
-                aiRows.ollamaModel.style.display = isClaude ? 'none' : 'grid';
+                aiRows.claudeModel.style.display = isClaude ? 'block' : 'none';
+                aiRows.ollamaModel.style.display = isClaude ? 'none' : 'block';
             } else {
                 aiRows.claudeModel.style.display = 'none';
                 aiRows.ollamaModel.style.display = 'none';
             }
         }
 
-        // Initialize event listeners
+        // Config Editor Functions
+        function formatConfig() {
+            const editor = document.getElementById('config-editor');
+            try {
+                const parsed = JSON.parse(editor.value);
+                editor.value = JSON.stringify(parsed, null, 2);
+                showStatus('Formatted successfully', 'success');
+            } catch (e) {
+                showStatus('Invalid JSON: ' + e.message, 'error');
+            }
+        }
+
+        function downloadConfig() {
+            const editor = document.getElementById('config-editor');
+            try {
+                JSON.parse(editor.value);
+                const blob = new Blob([editor.value], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'config.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                showStatus('Fix JSON errors before downloading', 'error');
+            }
+        }
+
+        function saveConfigToClipboard() {
+            const editor = document.getElementById('config-editor');
+            try {
+                JSON.parse(editor.value);
+                navigator.clipboard.writeText(editor.value).then(() => showFeedback('Config copied!'));
+            } catch (e) {
+                showStatus('Fix JSON errors before copying', 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('config-status');
+            status.textContent = message;
+            status.className = 'config-status ' + type;
+            setTimeout(() => status.className = 'config-status', 3000);
+        }
+
+        function addJobTitle() {
+            const input = document.getElementById('new-job-title');
+            const title = input.value.trim();
+            if (!title) return;
+
+            const editor = document.getElementById('config-editor');
+            try {
+                const config = JSON.parse(editor.value);
+                if (!config.job_titles) config.job_titles = [];
+                if (!config.job_titles.includes(title)) {
+                    config.job_titles.push(title);
+                    editor.value = JSON.stringify(config, null, 2);
+                    input.value = '';
+                    showStatus(`Added: ${title}`, 'success');
+                } else {
+                    showStatus('Title already exists', 'error');
+                }
+            } catch (e) {
+                showStatus('Fix JSON errors first', 'error');
+            }
+        }
+
+        function addExclusion() {
+            const input = document.getElementById('new-exclusion');
+            const keyword = input.value.trim();
+            if (!keyword) return;
+
+            const editor = document.getElementById('config-editor');
+            try {
+                const config = JSON.parse(editor.value);
+                if (!config.exclude_in_title) config.exclude_in_title = [];
+                if (!config.exclude_in_title.includes(keyword)) {
+                    config.exclude_in_title.push(keyword);
+                    editor.value = JSON.stringify(config, null, 2);
+                    input.value = '';
+                    showStatus(`Added exclusion: ${keyword}`, 'success');
+                } else {
+                    showStatus('Keyword already exists', 'error');
+                }
+            } catch (e) {
+                showStatus('Fix JSON errors first', 'error');
+            }
+        }
+
+        // File upload
+        const fileInput = document.getElementById('config-file-input');
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        document.getElementById('config-editor').value = JSON.stringify(parsed, null, 2);
+                        showStatus('Config loaded successfully', 'success');
+                    } catch (err) {
+                        showStatus('Invalid JSON file', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Drag and drop
+        const uploadArea = document.querySelector('.file-upload');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = 'var(--primary)';
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = 'var(--border)';
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = 'var(--border)';
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.json')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        document.getElementById('config-editor').value = JSON.stringify(parsed, null, 2);
+                        showStatus('Config loaded successfully', 'success');
+                    } catch (err) {
+                        showStatus('Invalid JSON file', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Initialize
         function init() {
-            // Text and number inputs
-            ['keywords', 'geoId', 'location', 'maxJobs', 'maxAge', 'output', 'workers'].forEach(key => {
+            ['keywords', 'geoId', 'location', 'maxJobs', 'maxAge', 'output', 'workers', 'ollamaModel'].forEach(key => {
                 inputs[key].addEventListener('input', buildCommand);
             });
 
-            // Select
             inputs.timeRange.addEventListener('change', buildCommand);
-
-            // Checkboxes
-            inputs.allTitles.addEventListener('change', () => {
-                updateCheckboxStyle(inputs.allTitles, checkboxOptions.allTitles);
-                // Disable keywords when all-titles is checked
-                inputs.keywords.disabled = inputs.allTitles.checked;
-                if (inputs.allTitles.checked) {
-                    inputs.keywords.value = '';
-                }
-                buildCommand();
-            });
-
-            inputs.easyApply.addEventListener('change', () => {
-                updateCheckboxStyle(inputs.easyApply, checkboxOptions.easyApply);
-                buildCommand();
-            });
-
-            inputs.includePromoted.addEventListener('change', () => {
-                updateCheckboxStyle(inputs.includePromoted, checkboxOptions.includePromoted);
-                buildCommand();
-            });
-
-            inputs.noDescription.addEventListener('change', () => {
-                updateCheckboxStyle(inputs.noDescription, checkboxOptions.noDescription);
-                buildCommand();
-            });
-
-            inputs.noMerge.addEventListener('change', () => {
-                updateCheckboxStyle(inputs.noMerge, checkboxOptions.noMerge);
-                buildCommand();
-            });
-
-            // AI Analysis options
-            inputs.analyze.addEventListener('change', () => {
-                updateCheckboxStyle(inputs.analyze, checkboxOptions.analyze);
-                updateAIOptionsVisibility();
-                buildCommand();
-            });
-
-            inputs.aiBackend.addEventListener('change', () => {
-                updateAIOptionsVisibility();
-                buildCommand();
-            });
-
+            inputs.aiBackend.addEventListener('change', () => { updateAIOptionsVisibility(); buildCommand(); });
             inputs.claudeModel.addEventListener('change', buildCommand);
-            inputs.ollamaModel.addEventListener('input', buildCommand);
 
-            // Initialize AI options visibility
-            updateAIOptionsVisibility();
-
-            // GeoId preset buttons
-            presetButtons.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const geoId = btn.dataset.geoid;
-                    inputs.geoId.value = geoId;
-
-                    // Update active state
-                    presetButtons.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-
+            ['allTitles', 'easyApply', 'includePromoted', 'noDescription', 'noMerge'].forEach(key => {
+                inputs[key].addEventListener('change', () => {
+                    if (key === 'allTitles') {
+                        inputs.keywords.disabled = inputs.allTitles.checked;
+                        if (inputs.allTitles.checked) inputs.keywords.value = '';
+                    }
                     buildCommand();
                 });
             });
 
-            // Clear location when geoId is used
-            inputs.geoId.addEventListener('input', () => {
-                if (inputs.geoId.value.trim()) {
-                    inputs.location.value = '';
-                }
+            inputs.analyze.addEventListener('change', () => {
+                updateAIOptionsVisibility();
+                buildCommand();
             });
 
-            // Clear geoId when location is used
+            presetButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    inputs.geoId.value = btn.dataset.geoid;
+                    presetButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    buildCommand();
+                });
+            });
+
+            inputs.geoId.addEventListener('input', () => {
+                if (inputs.geoId.value.trim()) inputs.location.value = '';
+            });
+
             inputs.location.addEventListener('input', () => {
                 if (inputs.location.value.trim()) {
                     inputs.geoId.value = '';
@@ -1104,11 +1186,10 @@
                 }
             });
 
-            // Initial build
+            updateAIOptionsVisibility();
             buildCommand();
         }
 
-        // Initialize on DOM load
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
