@@ -19,6 +19,7 @@
             --bg-card: #ffffff;
             --text-primary: #191919;
             --text-secondary: #666666;
+            --text-disabled: #aaaaaa;
             --border: #dce6f1;
             --success: #057642;
             --warning: #b24020;
@@ -60,7 +61,6 @@
             font-weight: 600;
         }
 
-        /* Tabs */
         .tabs {
             display: flex;
             gap: 0;
@@ -91,7 +91,7 @@
         main {
             flex: 1;
             padding: 20px 24px;
-            max-width: 1600px;
+            max-width: 1400px;
             margin: 0 auto;
             width: 100%;
         }
@@ -104,12 +104,18 @@
             display: block;
         }
 
-        /* Options Grid - Top Section */
+        /* Two Column Options Grid */
         .options-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: 1fr 1fr;
             gap: 20px;
             margin-bottom: 20px;
+        }
+
+        .option-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
         .option-card {
@@ -174,6 +180,19 @@
             color: #999;
         }
 
+        /* Disabled/greyed out state */
+        .option-row.disabled label,
+        .option-row.disabled .flag {
+            color: var(--text-disabled);
+        }
+
+        .option-row.disabled input,
+        .option-row.disabled select {
+            background: var(--bg-light);
+            color: var(--text-disabled);
+            cursor: not-allowed;
+        }
+
         .checkbox-row {
             display: flex;
             align-items: center;
@@ -192,6 +211,14 @@
             margin-bottom: 0;
             cursor: pointer;
             font-size: 13px;
+        }
+
+        .checkbox-row.disabled label {
+            color: var(--text-disabled);
+        }
+
+        .checkbox-row.disabled input[type="checkbox"] {
+            cursor: not-allowed;
         }
 
         .geoid-presets {
@@ -222,18 +249,13 @@
             border-color: var(--primary);
         }
 
-        /* Bottom Section - Command + Help */
-        .bottom-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
+        /* Command Panel */
         .command-panel {
             background: var(--bg-card);
             border-radius: 10px;
             border: 1px solid var(--border);
             padding: 16px;
+            margin-bottom: 20px;
         }
 
         .command-panel h3 {
@@ -250,7 +272,7 @@
             border-radius: 6px;
             padding: 14px;
             margin-bottom: 12px;
-            min-height: 60px;
+            min-height: 50px;
         }
 
         .command-output pre {
@@ -323,7 +345,7 @@
         .help-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            gap: 24px;
         }
 
         .help-section h4 {
@@ -528,17 +550,8 @@
         }
 
         /* Responsive */
-        @media (max-width: 1200px) {
+        @media (max-width: 900px) {
             .options-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .options-grid {
-                grid-template-columns: 1fr;
-            }
-            .bottom-section {
                 grid-template-columns: 1fr;
             }
             .help-grid {
@@ -563,164 +576,163 @@
     <main>
         <!-- Command Builder Tab -->
         <div class="tab-content active" id="builder-tab">
-            <!-- Options Grid -->
+            <!-- Two Column Options Grid -->
             <div class="options-grid">
-                <!-- Search Options -->
-                <div class="option-card">
-                    <h3>Search</h3>
-                    <div class="option-row">
-                        <label>Keywords <span class="flag">-k</span></label>
-                        <input type="text" id="keywords" placeholder="e.g., Engineering Manager">
-                    </div>
-                    <div class="option-row">
-                        <label>Geo ID <span class="flag">-g</span></label>
-                        <input type="text" id="geo-id" placeholder="e.g., 90009496">
-                        <div class="geoid-presets">
-                            <button class="preset-btn" data-geoid="90009496">Greater London</button>
-                            <button class="preset-btn" data-geoid="102257491">London City</button>
-                            <button class="preset-btn" data-geoid="101165590">UK</button>
+                <!-- Left Column: Search + Filters -->
+                <div class="option-column">
+                    <div class="option-card">
+                        <h3>Search</h3>
+                        <div class="option-row">
+                            <label>Keywords <span class="flag">-k</span></label>
+                            <input type="text" id="keywords" placeholder="e.g., Engineering Manager">
+                        </div>
+                        <div class="option-row">
+                            <label>Geo ID <span class="flag">-g</span></label>
+                            <input type="text" id="geo-id" placeholder="e.g., 90009496">
+                            <div class="geoid-presets">
+                                <button class="preset-btn" data-geoid="90009496">Greater London</button>
+                                <button class="preset-btn" data-geoid="102257491">London City</button>
+                                <button class="preset-btn" data-geoid="101165590">UK</button>
+                            </div>
+                        </div>
+                        <div class="option-row">
+                            <label>Location <span class="flag">-l</span><span class="deprecated">Deprecated</span></label>
+                            <input type="text" id="location" placeholder="e.g., London, UK">
                         </div>
                     </div>
-                    <div class="option-row">
-                        <label>Location <span class="flag">-l</span><span class="deprecated">Deprecated</span></label>
-                        <input type="text" id="location" placeholder="e.g., London, UK">
+
+                    <div class="option-card">
+                        <h3>Filters</h3>
+                        <div class="option-row">
+                            <label>Time Range <span class="flag">-t</span></label>
+                            <select id="time-range">
+                                <option value="">Default (config)</option>
+                                <option value="2h">Last 2 hours</option>
+                                <option value="6h">Last 6 hours</option>
+                                <option value="24h">Last 24 hours</option>
+                                <option value="48h">Last 48 hours</option>
+                                <option value="7d">Last 7 days</option>
+                                <option value="30d">Last 30 days</option>
+                            </select>
+                        </div>
+                        <div class="option-row">
+                            <label>Max Jobs <span class="flag">-n</span></label>
+                            <input type="number" id="max-jobs" placeholder="0 = unlimited" min="0">
+                        </div>
+                        <div class="option-row">
+                            <label>Max Age <span class="flag">--max-age</span></label>
+                            <input type="text" id="max-age" placeholder="e.g., 12h">
+                        </div>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="all-titles">
+                            <label for="all-titles">All Titles <span class="flag">-a</span></label>
+                        </div>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="easy-apply">
+                            <label for="easy-apply">Easy Apply <span class="flag">--easy-apply</span></label>
+                        </div>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="include-promoted">
+                            <label for="include-promoted">Include Promoted <span class="flag">--include-promoted</span></label>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Filters -->
-                <div class="option-card">
-                    <h3>Filters</h3>
-                    <div class="option-row">
-                        <label>Time Range <span class="flag">-t</span></label>
-                        <select id="time-range">
-                            <option value="">Default (config)</option>
-                            <option value="2h">Last 2 hours</option>
-                            <option value="6h">Last 6 hours</option>
-                            <option value="24h">Last 24 hours</option>
-                            <option value="48h">Last 48 hours</option>
-                            <option value="7d">Last 7 days</option>
-                            <option value="30d">Last 30 days</option>
-                        </select>
+                <!-- Right Column: Output + AI Analysis -->
+                <div class="option-column">
+                    <div class="option-card">
+                        <h3>Output</h3>
+                        <div class="option-row">
+                            <label>Output File <span class="flag">-o</span></label>
+                            <input type="text" id="output" placeholder="linkedin_jobs_YYYYMMDD.json">
+                        </div>
+                        <div class="option-row">
+                            <label>Workers <span class="flag">-w</span></label>
+                            <input type="number" id="workers" placeholder="2" min="1" max="5">
+                        </div>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="no-description">
+                            <label for="no-description">Skip Descriptions <span class="flag">-nd</span></label>
+                        </div>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="no-merge">
+                            <label for="no-merge">Overwrite File <span class="flag">--no-merge</span></label>
+                        </div>
                     </div>
-                    <div class="option-row">
-                        <label>Max Jobs <span class="flag">-n</span></label>
-                        <input type="number" id="max-jobs" placeholder="0 = unlimited" min="0">
-                    </div>
-                    <div class="option-row">
-                        <label>Max Age <span class="flag">--max-age</span></label>
-                        <input type="text" id="max-age" placeholder="e.g., 12h">
-                    </div>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="all-titles">
-                        <label for="all-titles">All Titles <span class="flag">-a</span></label>
-                    </div>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="easy-apply">
-                        <label for="easy-apply">Easy Apply <span class="flag">--easy-apply</span></label>
-                    </div>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="include-promoted">
-                        <label for="include-promoted">Include Promoted <span class="flag">--include-promoted</span></label>
-                    </div>
-                </div>
 
-                <!-- Output Options -->
-                <div class="option-card">
-                    <h3>Output</h3>
-                    <div class="option-row">
-                        <label>Output File <span class="flag">-o</span></label>
-                        <input type="text" id="output" placeholder="linkedin_jobs_YYYYMMDD.json">
-                    </div>
-                    <div class="option-row">
-                        <label>Workers <span class="flag">-w</span></label>
-                        <input type="number" id="workers" placeholder="2" min="1" max="5">
-                    </div>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="no-description">
-                        <label for="no-description">Skip Descriptions <span class="flag">-nd</span></label>
-                    </div>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="no-merge">
-                        <label for="no-merge">Overwrite File <span class="flag">--no-merge</span></label>
-                    </div>
-                </div>
-
-                <!-- AI Analysis -->
-                <div class="option-card">
-                    <h3>AI Analysis</h3>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="analyze">
-                        <label for="analyze">Run AI Analysis <span class="flag">--analyze</span></label>
-                    </div>
-                    <div class="option-row" id="ai-backend-row">
-                        <label>AI Backend</label>
-                        <select id="ai-backend">
-                            <option value="ollama">Ollama (local)</option>
-                            <option value="claude">Claude (cloud)</option>
-                        </select>
-                    </div>
-                    <div class="option-row" id="claude-model-row">
-                        <label>Claude Model <span class="flag">--claude-model</span></label>
-                        <select id="claude-model">
-                            <option value="haiku">Haiku (fast)</option>
-                            <option value="sonnet">Sonnet</option>
-                            <option value="opus">Opus</option>
-                        </select>
-                    </div>
-                    <div class="option-row" id="ollama-model-row">
-                        <label>Ollama Model <span class="flag">--ollama-model</span></label>
-                        <input type="text" id="ollama-model" placeholder="qwen2.5:7b" value="qwen2.5:7b">
+                    <div class="option-card">
+                        <h3>AI Analysis</h3>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="analyze">
+                            <label for="analyze">Run AI Analysis <span class="flag">--analyze</span></label>
+                        </div>
+                        <div class="option-row" id="ai-backend-row">
+                            <label>AI Backend</label>
+                            <select id="ai-backend">
+                                <option value="ollama">Ollama (local)</option>
+                                <option value="claude">Claude (cloud)</option>
+                            </select>
+                        </div>
+                        <div class="option-row" id="claude-model-row">
+                            <label>Claude Model <span class="flag">--claude-model</span></label>
+                            <select id="claude-model">
+                                <option value="haiku">Haiku (fast)</option>
+                                <option value="sonnet">Sonnet</option>
+                                <option value="opus">Opus</option>
+                            </select>
+                        </div>
+                        <div class="option-row" id="ollama-model-row">
+                            <label>Ollama Model <span class="flag">--ollama-model</span></label>
+                            <input type="text" id="ollama-model" placeholder="qwen2.5:7b" value="qwen2.5:7b">
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Bottom Section -->
-            <div class="bottom-section">
-                <!-- Command Output -->
-                <div class="command-panel">
-                    <h3>Generated Command</h3>
-                    <div class="command-output">
-                        <pre id="command-preview"><span class="cmd">python</span> linkedin_scraper.py</pre>
-                    </div>
-                    <div class="actions">
-                        <button class="btn btn-primary" onclick="copyCommand()">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                            Copy
-                        </button>
-                        <button class="btn btn-secondary" onclick="resetForm()">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                                <path d="M3 3v5h5"></path>
-                            </svg>
-                            Reset
-                        </button>
-                    </div>
+            <!-- Generated Command -->
+            <div class="command-panel">
+                <h3>Generated Command</h3>
+                <div class="command-output">
+                    <pre id="command-preview"><span class="cmd">python</span> linkedin_scraper.py</pre>
                 </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="copyCommand()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetForm()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                            <path d="M3 3v5h5"></path>
+                        </svg>
+                        Reset
+                    </button>
+                </div>
+            </div>
 
-                <!-- Help Panel -->
-                <div class="help-panel">
-                    <h3>Quick Reference</h3>
-                    <div class="help-grid">
-                        <div class="help-section">
-                            <h4>Common geoIds</h4>
-                            <table>
-                                <tr><td>Greater London</td><td><code>90009496</code></td></tr>
-                                <tr><td>London (city)</td><td><code>102257491</code></td></tr>
-                                <tr><td>United Kingdom</td><td><code>101165590</code></td></tr>
-                            </table>
-                        </div>
-                        <div class="help-section">
-                            <h4>Examples</h4>
-                            <table>
-                                <tr><td>All titles, 48h</td><td><code>-a -g 90009496 -t 48h</code></td></tr>
-                                <tr><td>Easy Apply only</td><td><code>-a -g 90009496 --easy-apply</code></td></tr>
-                                <tr><td>With AI (Claude)</td><td><code>-a --analyze --claude</code></td></tr>
-                                <tr><td>Fast scan</td><td><code>-a -g 90009496 -nd</code></td></tr>
-                            </table>
-                        </div>
+            <!-- Quick Reference -->
+            <div class="help-panel">
+                <h3>Quick Reference</h3>
+                <div class="help-grid">
+                    <div class="help-section">
+                        <h4>Common geoIds</h4>
+                        <table>
+                            <tr><td>Greater London</td><td><code>90009496</code></td></tr>
+                            <tr><td>London (city)</td><td><code>102257491</code></td></tr>
+                            <tr><td>United Kingdom</td><td><code>101165590</code></td></tr>
+                        </table>
+                    </div>
+                    <div class="help-section">
+                        <h4>Examples</h4>
+                        <table>
+                            <tr><td>All titles, 48h</td><td><code>-a -g 90009496 -t 48h</code></td></tr>
+                            <tr><td>Easy Apply only</td><td><code>-a -g 90009496 --easy-apply</code></td></tr>
+                            <tr><td>With AI (Claude)</td><td><code>-a --analyze --claude</code></td></tr>
+                            <tr><td>Fast scan</td><td><code>-a -g 90009496 -nd</code></td></tr>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -987,21 +999,26 @@
             });
             inputs.ollamaModel.value = 'qwen2.5:7b';
             presetButtons.forEach(btn => btn.classList.remove('active'));
-            updateAIOptionsVisibility();
+            updateAIOptionsState();
             buildCommand();
         }
 
-        function updateAIOptionsVisibility() {
+        // Grey out AI options instead of hiding
+        function updateAIOptionsState() {
             const enabled = inputs.analyze.checked;
-            aiRows.backend.style.display = enabled ? 'block' : 'none';
-            if (enabled) {
-                const isClaude = inputs.aiBackend.value === 'claude';
-                aiRows.claudeModel.style.display = isClaude ? 'block' : 'none';
-                aiRows.ollamaModel.style.display = isClaude ? 'none' : 'block';
-            } else {
-                aiRows.claudeModel.style.display = 'none';
-                aiRows.ollamaModel.style.display = 'none';
-            }
+            const isClaude = inputs.aiBackend.value === 'claude';
+
+            // Backend row
+            aiRows.backend.classList.toggle('disabled', !enabled);
+            inputs.aiBackend.disabled = !enabled;
+
+            // Claude model row
+            aiRows.claudeModel.classList.toggle('disabled', !enabled || !isClaude);
+            inputs.claudeModel.disabled = !enabled || !isClaude;
+
+            // Ollama model row
+            aiRows.ollamaModel.classList.toggle('disabled', !enabled || isClaude);
+            inputs.ollamaModel.disabled = !enabled || isClaude;
         }
 
         // Config Editor Functions
@@ -1147,7 +1164,7 @@
             });
 
             inputs.timeRange.addEventListener('change', buildCommand);
-            inputs.aiBackend.addEventListener('change', () => { updateAIOptionsVisibility(); buildCommand(); });
+            inputs.aiBackend.addEventListener('change', () => { updateAIOptionsState(); buildCommand(); });
             inputs.claudeModel.addEventListener('change', buildCommand);
 
             ['allTitles', 'easyApply', 'includePromoted', 'noDescription', 'noMerge'].forEach(key => {
@@ -1161,7 +1178,7 @@
             });
 
             inputs.analyze.addEventListener('change', () => {
-                updateAIOptionsVisibility();
+                updateAIOptionsState();
                 buildCommand();
             });
 
@@ -1186,7 +1203,7 @@
                 }
             });
 
-            updateAIOptionsVisibility();
+            updateAIOptionsState();
             buildCommand();
         }
 
