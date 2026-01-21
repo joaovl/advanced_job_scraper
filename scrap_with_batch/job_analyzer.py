@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 """
-Job Analyzer - Analyzes scraped jobs against CV using Ollama LLM
+Job Analyzer - Analyzes scraped jobs against CV using AI (Claude or Ollama)
 Produces Excel output with scoring and match analysis
+
+Supports:
+- Claude CLI (cloud, fast, accurate) - requires Claude CLI installed
+- Ollama (local, free) - requires Ollama running
 """
 
 import json
 import argparse
 import logging
 import requests
+import subprocess
+import tempfile
+import time
+import random
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -31,7 +39,8 @@ logger = logging.getLogger(__name__)
 
 
 class JobAnalyzer:
-    def __init__(self, config_path: str = "config.json", cv_path: str = None):
+    def __init__(self, config_path: str = "config.json", cv_path: str = None,
+                 use_claude: bool = False, claude_model: str = "haiku"):
         self.config = self.load_config(config_path)
         self.cv_content = self.load_cv(cv_path)
         self.ollama_url = self.config.get("ollama_url", "http://localhost:11434")
@@ -41,6 +50,10 @@ class JobAnalyzer:
         self.exclude_in_description = [k.lower() for k in self.config.get("exclude_in_description", [])]
         self.flag_for_review = [k.lower() for k in self.config.get("flag_for_review", [])]
         self.must_have = [k.lower() for k in self.config.get("must_have", [])]
+
+        # AI backend selection
+        self.use_claude = use_claude
+        self.claude_model = claude_model  # haiku, sonnet, or opus
 
         # Load score adjustments for keyword weighting
         score_adj = self.config.get("score_adjustments", {})
@@ -182,6 +195,84 @@ class JobAnalyzer:
                 matched_negative.append(f"{keyword}({weight})")
 
         return adjustment, matched_positive, matched_negative
+
+    def call_claude(self, job: Dict, max_retries: int = 3) -> Dict:
+        """Call Claude CLI to analyze job against CV."""
+        cv_summary = self.cv_content[:2500] if self.cv_content else "No CV provided"
+
+        clean_desc = re.sub(r'[\x00-\x1F\x7F]', ' ', (job.get('description') or '')[:2000])
+        clean_desc = re.sub(r'\s+', ' ', clean_desc)
+
+        prompt = f"""You are a job matching expert. Analyze if this job matches the candidate's CV.
+
+CANDIDATE CV:
+{cv_summary}
+
+---
+
+JOB TO ANALYZE:
+Title: {job.get('title', 'Unknown')}
+Company: {job.get('company', 'Unknown')}
+Description: {clean_desc}
+
+SCORING CRITERIA:
+- 9-10: Perfect match - role aligns with experience, seniority, and domain
+- 7-8: Good match - most requirements align, minor gaps acceptable
+- 5-6: Partial match - some alignment but significant gaps
+- 1-4: Poor match - wrong seniority, domain, or role type
+
+REJECT if: Individual contributor coding role, hardware/electrical engineering, junior/entry level, non-software domain.
+
+MATCH if: Engineering/QA management role, team leadership, test/release management, CI/CD, agile, software quality.
+
+Return ONLY a JSON object (no markdown, no explanation):
+{{"relevant": true/false, "rejection_reason": "reason if not relevant", "score": 1-10, "match_reasons": ["reason1", "reason2"]}}"""
+
+        for attempt in range(max_retries):
+            try:
+                cmd = ["claude", "-p", prompt, "--output-format", "text"]
+
+                if self.claude_model in ['haiku', 'sonnet', 'opus']:
+                    cmd.extend(["--model", self.claude_model])
+
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=90,
+                    encoding='utf-8'
+                )
+
+                if result.returncode != 0:
+                    error_msg = result.stderr[:200] if result.stderr else "Unknown error"
+                    if "rate" in error_msg.lower() or "limit" in error_msg.lower():
+                        if attempt < max_retries - 1:
+                            wait_time = (attempt + 1) * 2 + random.uniform(0, 1)
+                            time.sleep(wait_time)
+                            continue
+                    raise Exception(f"Claude CLI error: {error_msg}")
+
+                content = result.stdout
+
+                # Extract JSON from response
+                match = re.search(r'\{[\s\S]*\}', content)
+                if match:
+                    return json.loads(match.group(0))
+
+                return {"relevant": False, "rejection_reason": "Could not parse response", "score": 0, "match_reasons": []}
+
+            except subprocess.TimeoutExpired:
+                if attempt < max_retries - 1:
+                    time.sleep(2)
+                    continue
+                return {"relevant": False, "rejection_reason": "Claude timeout", "score": 0, "match_reasons": []}
+            except Exception as e:
+                if attempt < max_retries - 1 and ("rate" in str(e).lower()):
+                    time.sleep((attempt + 1) * 2)
+                    continue
+                return {"relevant": False, "rejection_reason": f"Claude error: {str(e)[:50]}", "score": 0, "match_reasons": []}
+
+        return {"relevant": False, "rejection_reason": "Max retries exceeded", "score": 0, "match_reasons": []}
 
     def call_ollama(self, job: Dict) -> Dict:
         """Call Ollama API to analyze job against CV."""
@@ -326,8 +417,12 @@ Analyze if this job matches the candidate. Return JSON only."""
             return result
 
         # TIER 5: AI Analysis
-        logger.info(f"  -> Calling Ollama ({self.ollama_model})...")
-        analysis = self.call_ollama(job)
+        if self.use_claude:
+            logger.info(f"  -> Calling Claude ({self.claude_model})...")
+            analysis = self.call_claude(job)
+        else:
+            logger.info(f"  -> Calling Ollama ({self.ollama_model})...")
+            analysis = self.call_ollama(job)
 
         ai_score = int(analysis.get('score', 0))
         result['ai_score'] = ai_score
@@ -490,8 +585,34 @@ Analyze if this job matches the candidate. Return JSON only."""
         print()
 
 
+def check_claude_cli() -> bool:
+    """Check if Claude CLI is available."""
+    try:
+        result = subprocess.run(
+            ["claude", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+def check_ollama(url: str, model: str) -> bool:
+    """Check if Ollama is running and model is available."""
+    try:
+        response = requests.get(f"{url}/api/tags", timeout=5)
+        if response.status_code == 200:
+            models = [m['name'] for m in response.json().get('models', [])]
+            return model in models or any(model in m for m in models)
+    except:
+        pass
+    return False
+
+
 def main():
-    parser = argparse.ArgumentParser(description='Analyze jobs against CV using Ollama')
+    parser = argparse.ArgumentParser(description='Analyze jobs against CV using AI (Claude or Ollama)')
     parser.add_argument('jobs_file', help='Path to jobs JSON file')
     parser.add_argument('-c', '--config', default='config.json', help='Path to config file')
     parser.add_argument('--cv', help='Path to CV text file')
@@ -500,19 +621,50 @@ def main():
     parser.add_argument('--limit', type=int, help='Limit number of jobs to analyze')
     parser.add_argument('--company', help='Filter to specific company')
     parser.add_argument('--matched-only', action='store_true', help='Only show matched jobs in output')
-    parser.add_argument('--model', help='Override Ollama model (e.g., qwen2.5:7b, llama3.1:8b)')
     parser.add_argument('--timeout', type=int, default=180, help='Ollama API timeout in seconds')
     parser.add_argument('--skip-analyzed', metavar='FILE', help='Skip jobs already in this analysis JSON file')
-    parser.add_argument('--reanalyze', action='store_true', help='Force reanalysis even if in skip file (use with different model)')
+    parser.add_argument('--reanalyze', action='store_true', help='Force reanalysis even if in skip file')
+
+    # AI backend selection
+    backend_group = parser.add_argument_group('AI Backend')
+    backend_group.add_argument('--claude', action='store_true',
+                               help='Use Claude CLI (cloud, fast, accurate)')
+    backend_group.add_argument('--claude-model', choices=['haiku', 'sonnet', 'opus'], default='haiku',
+                               help='Claude model (default: haiku - faster/cheaper)')
+    backend_group.add_argument('--model', help='Ollama model (e.g., qwen2.5:7b, llama3.1:8b)')
+
     args = parser.parse_args()
 
-    # Initialize analyzer
-    analyzer = JobAnalyzer(config_path=args.config, cv_path=args.cv)
+    # Determine AI backend
+    use_claude = args.claude
 
-    # Override model if specified
-    if args.model:
+    # Verify backend availability
+    if use_claude:
+        if not check_claude_cli():
+            logger.error("Claude CLI not found. Install with: npm install -g @anthropic-ai/claude-code")
+            return
+        logger.info(f"Using Claude CLI ({args.claude_model})")
+    else:
+        ollama_url = "http://localhost:11434"
+        ollama_model = args.model or "qwen2.5:7b"
+        if not check_ollama(ollama_url, ollama_model):
+            logger.error(f"Ollama not running or model '{ollama_model}' not available")
+            logger.error("Start Ollama with: ollama serve")
+            logger.error(f"Pull model with: ollama pull {ollama_model}")
+            return
+        logger.info(f"Using Ollama ({ollama_model})")
+
+    # Initialize analyzer
+    analyzer = JobAnalyzer(
+        config_path=args.config,
+        cv_path=args.cv,
+        use_claude=use_claude,
+        claude_model=args.claude_model
+    )
+
+    # Override Ollama model if specified
+    if args.model and not use_claude:
         analyzer.ollama_model = args.model
-        logger.info(f"Using model: {args.model}")
 
     # Store timeout for API calls
     analyzer.api_timeout = args.timeout

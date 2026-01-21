@@ -760,6 +760,17 @@ def main():
     parser.add_argument("--easy-apply", action="store_true",
                         help="Only Easy Apply jobs (typically fewer applicants)")
 
+    # AI Analysis options
+    analysis_group = parser.add_argument_group('AI Analysis')
+    analysis_group.add_argument("--analyze", action="store_true",
+                                help="Run AI analysis after scraping")
+    analysis_group.add_argument("--claude", action="store_true",
+                                help="Use Claude CLI for analysis (default: Ollama)")
+    analysis_group.add_argument("--claude-model", choices=["haiku", "sonnet", "opus"], default="haiku",
+                                help="Claude model (default: haiku)")
+    analysis_group.add_argument("--ollama-model", default="qwen2.5:7b",
+                                help="Ollama model (default: qwen2.5:7b)")
+
     args = parser.parse_args()
     config = load_config()
 
@@ -871,8 +882,53 @@ def main():
     if all_jobs:
         scraper.save_results(all_jobs, output_file, merge_existing=not args.no_merge)
         logger.info(f"\nDone! Scraped {len(all_jobs)} new jobs -> {output_file}")
+
+        # Run AI analysis if requested
+        if args.analyze:
+            run_analysis(output_file, args)
     else:
         logger.info("No new jobs found")
+
+
+def run_analysis(jobs_file: str, args) -> None:
+    """Run AI analysis on scraped jobs using job_analyzer.py"""
+    import subprocess
+    import sys
+
+    logger.info("\n" + "=" * 60)
+    logger.info("RUNNING AI ANALYSIS")
+    logger.info("=" * 60)
+
+    # Build the analyzer command
+    script_dir = Path(__file__).parent
+    analyzer_script = script_dir / "job_analyzer.py"
+
+    if not analyzer_script.exists():
+        logger.error(f"Analyzer script not found: {analyzer_script}")
+        return
+
+    cmd = [sys.executable, str(analyzer_script), jobs_file]
+
+    # Add AI backend flags
+    if args.claude:
+        cmd.extend(["--claude", "--claude-model", args.claude_model])
+    else:
+        cmd.extend(["--model", args.ollama_model])
+
+    # Output file
+    output_excel = jobs_file.replace('.json', '_analysis.xlsx')
+    cmd.extend(["-o", output_excel])
+
+    logger.info(f"Running: {' '.join(cmd)}")
+
+    try:
+        result = subprocess.run(cmd, cwd=str(script_dir))
+        if result.returncode == 0:
+            logger.info(f"\nAnalysis complete! Results saved to: {output_excel}")
+        else:
+            logger.error(f"Analysis failed with return code {result.returncode}")
+    except Exception as e:
+        logger.error(f"Failed to run analysis: {e}")
 
 
 if __name__ == "__main__":

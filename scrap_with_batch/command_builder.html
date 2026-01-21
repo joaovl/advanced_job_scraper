@@ -595,6 +595,60 @@
                         </label>
                     </div>
                 </div>
+
+                <!-- AI Analysis -->
+                <div class="section">
+                    <div class="section-title">AI Analysis</div>
+                    <div class="option-group">
+                        <label class="checkbox-option" id="analyze-option">
+                            <input type="checkbox" id="analyze">
+                            <div class="checkbox-content">
+                                <div class="title">Run AI Analysis <span class="flag">--analyze</span></div>
+                                <div class="desc">Analyze jobs against your CV after scraping</div>
+                            </div>
+                        </label>
+
+                        <div class="option" id="ai-backend-row">
+                            <div class="option-label">
+                                <label for="ai-backend">AI Backend</label>
+                                <span class="flag">--claude / --ollama</span>
+                            </div>
+                            <div class="option-input">
+                                <select id="ai-backend">
+                                    <option value="ollama">Ollama (local, free)</option>
+                                    <option value="claude">Claude (cloud, fast)</option>
+                                </select>
+                                <span class="help-text">Choose AI backend for job analysis</span>
+                            </div>
+                        </div>
+
+                        <div class="option" id="claude-model-row">
+                            <div class="option-label">
+                                <label for="claude-model">Claude Model</label>
+                                <span class="flag">--claude-model</span>
+                            </div>
+                            <div class="option-input">
+                                <select id="claude-model">
+                                    <option value="haiku">Haiku (fast, cheap)</option>
+                                    <option value="sonnet">Sonnet (balanced)</option>
+                                    <option value="opus">Opus (most capable)</option>
+                                </select>
+                                <span class="help-text">Claude model for analysis</span>
+                            </div>
+                        </div>
+
+                        <div class="option" id="ollama-model-row">
+                            <div class="option-label">
+                                <label for="ollama-model">Ollama Model</label>
+                                <span class="flag">--ollama-model</span>
+                            </div>
+                            <div class="option-input">
+                                <input type="text" id="ollama-model" placeholder="qwen2.5:7b" value="qwen2.5:7b">
+                                <span class="help-text">Ollama model for analysis (default: qwen2.5:7b)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -666,8 +720,12 @@
                             <td><code>-a -g 90009496 -nd</code></td>
                         </tr>
                         <tr>
-                            <td>Specific search with limit</td>
-                            <td><code>-k "Head of QA" -g 90009496 -n 50</code></td>
+                            <td>Scrape + AI analysis (Claude)</td>
+                            <td><code>-a -g 90009496 --analyze --claude</code></td>
+                        </tr>
+                        <tr>
+                            <td>Scrape + AI analysis (Ollama)</td>
+                            <td><code>-a -g 90009496 --analyze</code></td>
                         </tr>
                     </table>
                 </div>
@@ -692,7 +750,12 @@
             output: document.getElementById('output'),
             workers: document.getElementById('workers'),
             noDescription: document.getElementById('no-description'),
-            noMerge: document.getElementById('no-merge')
+            noMerge: document.getElementById('no-merge'),
+            // AI Analysis
+            analyze: document.getElementById('analyze'),
+            aiBackend: document.getElementById('ai-backend'),
+            claudeModel: document.getElementById('claude-model'),
+            ollamaModel: document.getElementById('ollama-model')
         };
 
         // Checkbox option elements for styling
@@ -701,7 +764,15 @@
             easyApply: document.getElementById('easy-apply-option'),
             includePromoted: document.getElementById('include-promoted-option'),
             noDescription: document.getElementById('no-description-option'),
-            noMerge: document.getElementById('no-merge-option')
+            noMerge: document.getElementById('no-merge-option'),
+            analyze: document.getElementById('analyze-option')
+        };
+
+        // AI option rows for show/hide
+        const aiRows = {
+            backend: document.getElementById('ai-backend-row'),
+            claudeModel: document.getElementById('claude-model-row'),
+            ollamaModel: document.getElementById('ollama-model-row')
         };
 
         // GeoId preset buttons
@@ -777,6 +848,23 @@
                 parts.push('<span class="flag">--no-merge</span>');
             }
 
+            // AI Analysis
+            if (inputs.analyze.checked) {
+                parts.push('<span class="flag">--analyze</span>');
+
+                if (inputs.aiBackend.value === 'claude') {
+                    parts.push('<span class="flag">--claude</span>');
+                    if (inputs.claudeModel.value !== 'haiku') {
+                        parts.push(`<span class="flag">--claude-model</span> <span class="value">${inputs.claudeModel.value}</span>`);
+                    }
+                } else {
+                    // Ollama is default, only add model if not default
+                    if (inputs.ollamaModel.value.trim() && inputs.ollamaModel.value.trim() !== 'qwen2.5:7b') {
+                        parts.push(`<span class="flag">--ollama-model</span> <span class="value">${escapeHtml(inputs.ollamaModel.value.trim())}</span>`);
+                    }
+                }
+            }
+
             document.getElementById('command-preview').innerHTML = parts.join(' ');
         }
 
@@ -834,6 +922,22 @@
                 parts.push('--no-merge');
             }
 
+            // AI Analysis
+            if (inputs.analyze.checked) {
+                parts.push('--analyze');
+
+                if (inputs.aiBackend.value === 'claude') {
+                    parts.push('--claude');
+                    if (inputs.claudeModel.value !== 'haiku') {
+                        parts.push(`--claude-model ${inputs.claudeModel.value}`);
+                    }
+                } else {
+                    if (inputs.ollamaModel.value.trim() && inputs.ollamaModel.value.trim() !== 'qwen2.5:7b') {
+                        parts.push(`--ollama-model ${inputs.ollamaModel.value.trim()}`);
+                    }
+                }
+            }
+
             return parts.join(' ');
         }
 
@@ -868,13 +972,19 @@
                 }
             });
 
+            // Reset default values
+            inputs.ollamaModel.value = 'qwen2.5:7b';
+
             // Remove active class from checkboxes
             Object.values(checkboxOptions).forEach(opt => {
-                opt.classList.remove('active');
+                if (opt) opt.classList.remove('active');
             });
 
             // Remove active class from preset buttons
             presetButtons.forEach(btn => btn.classList.remove('active'));
+
+            // Reset AI options visibility
+            updateAIOptionsVisibility();
 
             buildCommand();
         }
@@ -885,6 +995,23 @@
                 optionElement.classList.add('active');
             } else {
                 optionElement.classList.remove('active');
+            }
+        }
+
+        // Show/hide AI model options based on analyze checkbox and backend selection
+        function updateAIOptionsVisibility() {
+            const analyzeEnabled = inputs.analyze.checked;
+
+            // Show/hide all AI-related rows
+            aiRows.backend.style.display = analyzeEnabled ? 'grid' : 'none';
+
+            if (analyzeEnabled) {
+                const isClaude = inputs.aiBackend.value === 'claude';
+                aiRows.claudeModel.style.display = isClaude ? 'grid' : 'none';
+                aiRows.ollamaModel.style.display = isClaude ? 'none' : 'grid';
+            } else {
+                aiRows.claudeModel.style.display = 'none';
+                aiRows.ollamaModel.style.display = 'none';
             }
         }
 
@@ -928,6 +1055,24 @@
                 updateCheckboxStyle(inputs.noMerge, checkboxOptions.noMerge);
                 buildCommand();
             });
+
+            // AI Analysis options
+            inputs.analyze.addEventListener('change', () => {
+                updateCheckboxStyle(inputs.analyze, checkboxOptions.analyze);
+                updateAIOptionsVisibility();
+                buildCommand();
+            });
+
+            inputs.aiBackend.addEventListener('change', () => {
+                updateAIOptionsVisibility();
+                buildCommand();
+            });
+
+            inputs.claudeModel.addEventListener('change', buildCommand);
+            inputs.ollamaModel.addEventListener('input', buildCommand);
+
+            // Initialize AI options visibility
+            updateAIOptionsVisibility();
 
             // GeoId preset buttons
             presetButtons.forEach(btn => {
