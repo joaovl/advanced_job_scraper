@@ -883,20 +883,26 @@ def main():
         scraper.save_results(all_jobs, output_file, merge_existing=not args.no_merge)
         logger.info(f"\nDone! Scraped {len(all_jobs)} new jobs -> {output_file}")
 
-        # Run AI analysis if requested
+        # Run AI analysis if requested - only on NEW jobs
         if args.analyze:
-            run_analysis(output_file, args)
+            run_analysis(all_jobs, args)
     else:
         logger.info("No new jobs found")
+        if args.analyze:
+            logger.info("Skipping AI analysis - no new jobs to analyze")
 
 
-def run_analysis(jobs_file: str, args) -> None:
-    """Run AI analysis on scraped jobs using job_analyzer.py"""
+def run_analysis(new_jobs: list, args) -> None:
+    """Run AI analysis on newly scraped jobs only (not the entire file)."""
     import subprocess
     import sys
 
+    if not new_jobs:
+        logger.info("No new jobs to analyze")
+        return
+
     logger.info("\n" + "=" * 60)
-    logger.info("RUNNING AI ANALYSIS")
+    logger.info(f"RUNNING AI ANALYSIS ON {len(new_jobs)} NEW JOBS")
     logger.info("=" * 60)
 
     # Build the analyzer command
@@ -907,21 +913,34 @@ def run_analysis(jobs_file: str, args) -> None:
         logger.error(f"Analyzer script not found: {analyzer_script}")
         return
 
-    cmd = [sys.executable, str(analyzer_script), jobs_file]
-
-    # Add AI backend flags
-    if args.claude:
-        cmd.extend(["--claude", "--claude-model", args.claude_model])
-    else:
-        cmd.extend(["--model", args.ollama_model])
-
-    # Output file
-    output_excel = jobs_file.replace('.json', '_analysis.xlsx')
-    cmd.extend(["-o", output_excel])
-
-    logger.info(f"Running: {' '.join(cmd)}")
-
+    # Save new jobs to a temporary file for analysis
+    temp_file = script_dir / f"_temp_new_jobs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     try:
+        # Convert JobData objects to dicts if needed
+        jobs_data = []
+        for job in new_jobs:
+            if hasattr(job, 'to_dict'):
+                jobs_data.append(job.to_dict())
+            else:
+                jobs_data.append(job)
+
+        with open(temp_file, 'w', encoding='utf-8') as f:
+            json.dump(jobs_data, f, indent=2, ensure_ascii=False)
+
+        cmd = [sys.executable, str(analyzer_script), str(temp_file)]
+
+        # Add AI backend flags
+        if args.claude:
+            cmd.extend(["--claude", "--claude-model", args.claude_model])
+        else:
+            cmd.extend(["--model", args.ollama_model])
+
+        # Output file
+        output_excel = f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        cmd.extend(["-o", output_excel])
+
+        logger.info(f"Running: {' '.join(cmd)}")
+
         result = subprocess.run(cmd, cwd=str(script_dir))
         if result.returncode == 0:
             logger.info(f"\nAnalysis complete! Results saved to: {output_excel}")
@@ -929,6 +948,10 @@ def run_analysis(jobs_file: str, args) -> None:
             logger.error(f"Analysis failed with return code {result.returncode}")
     except Exception as e:
         logger.error(f"Failed to run analysis: {e}")
+    finally:
+        # Clean up temp file
+        if temp_file.exists():
+            temp_file.unlink()
 
 
 if __name__ == "__main__":

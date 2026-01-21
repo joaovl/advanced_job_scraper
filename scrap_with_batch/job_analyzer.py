@@ -176,23 +176,30 @@ class JobAnalyzer:
         """
         Calculate score adjustment based on weighted keywords.
         Returns (adjustment, matched_positive, matched_negative) tuple.
+
+        Note: Total adjustment is CAPPED at +3/-3 to prevent score inflation.
         """
         combined = (title + " " + description).lower()
-        adjustment = 0
+        raw_adjustment = 0
         matched_positive = []
         matched_negative = []
 
         # Check positive keywords
         for keyword, weight in self.positive_keywords.items():
             if keyword in combined:
-                adjustment += weight
+                raw_adjustment += weight
                 matched_positive.append(f"{keyword}(+{weight})")
 
         # Check negative keywords
         for keyword, weight in self.negative_keywords.items():
             if keyword in combined:
-                adjustment += weight  # weight is already negative
+                raw_adjustment += weight  # weight is already negative
                 matched_negative.append(f"{keyword}({weight})")
+
+        # Cap adjustment to prevent score inflation
+        # Max +3 for positive, -3 for negative
+        MAX_ADJUSTMENT = 3
+        adjustment = max(-MAX_ADJUSTMENT, min(MAX_ADJUSTMENT, raw_adjustment))
 
         return adjustment, matched_positive, matched_negative
 
