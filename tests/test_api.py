@@ -44,6 +44,17 @@ def test_search_matches_term_in_every_row(client, seeded):
         assert "fpga" in blob                                    # relevance is real
 
 
+def test_search_abbreviation_equivalence(client):
+    def ids(q):
+        return {r["id"] for r in rows(client, "q=" + q.replace(" ", "+"))["rows"]}
+    full = ids("principal software engineer")
+    abbr = ids("principal sw engineer")
+    loose = ids("principal engineer")
+    assert full and full == abbr                 # "sw" resolves to "software"
+    assert full.issubset(loose)                  # dropping a word only widens results
+    assert ids("sr engineer") == ids("senior engineer")
+
+
 def test_min_score_filter(client, seeded):
     d = rows(client, "min_score=8")
     assert d["total"] == seeded["expect"]["min8"]

@@ -14,6 +14,7 @@ Run:
 """
 import csv
 import io
+import re
 from pathlib import Path
 from flask import Flask, request, jsonify, Response, render_template, send_file
 from sqlalchemy import text
@@ -27,13 +28,38 @@ engine = get_engine(create_db_if_missing=False)
 UI_DIR = Path(__file__).parent.parent / "ui"
 
 
+# Abbreviations expanded so "principal sw engineer" == "principal software
+# engineer", "sr dev" == "senior developer", etc. Value may be a multi-word phrase.
+ABBREV = {
+    "sw": "software", "s/w": "software", "hw": "hardware", "h/w": "hardware",
+    "fw": "firmware", "sr": "senior", "snr": "senior", "jr": "junior",
+    "eng": "engineer", "engr": "engineer", "engg": "engineer",
+    "dev": "developer", "devs": "developer", "prog": "programmer",
+    "mgr": "manager", "prin": "principal", "princ": "principal",
+    "arch": "architect", "ml": "machine learning", "qa": "quality assurance",
+    "fs": "full stack", "fe": "frontend", "be": "backend", "ba": "business analyst",
+    "ops": "operations", "sec": "security", "sys": "systems",
+}
+
+
+def expand_query(q):
+    """Lower-case, expand known abbreviations to their full form."""
+    out = []
+    for tok in re.split(r"\s+", q.strip().lower()):
+        if tok:
+            out.append(ABBREV.get(tok, tok))
+    return " ".join(out)
+
+
 def _where(args):
     """Build a WHERE clause + params from query args."""
     clauses, params = [], {}
     q = (args.get("q") or "").strip()
     if q:
+        # AND of the (expanded) concept words, stemmed by the English config, so
+        # word order and abbreviations don't matter and plurals/tense are ignored.
         clauses.append("search @@ plainto_tsquery('english', :q)")
-        params["q"] = q
+        params["q"] = expand_query(q)
     if args.get("source"):
         clauses.append("source = :source")
         params["source"] = args["source"]
@@ -124,9 +150,13 @@ def api_jobs():
     params["limit"] = min(int(request.args.get("limit", 100)), 500)
     params["offset"] = int(request.args.get("offset", 0))
     order = request.args.get("sort")
-    order_sql = ("ai_score DESC NULLS LAST, is_competitor DESC"
-                 if order == "score"
-                 else "is_new DESC, is_competitor DESC, company, title")
+    if order == "score":
+        order_sql = "ai_score DESC NULLS LAST, is_competitor DESC"
+    elif params.get("q"):
+        # Best text matches first when searching.
+        order_sql = "ts_rank(search, plainto_tsquery('english', :q)) DESC, is_new DESC"
+    else:
+        order_sql = "is_new DESC, is_competitor DESC, company, title"
     sql = (
         "SELECT id, source, company, title, location, url, competitor, "
         "is_competitor, is_new, status, first_seen, ai_score, ai_match, "
