@@ -112,23 +112,31 @@ def run():
         n_all = page.locator(".job").count()
         check("library: shows job rows", n_all > 0, f"{n_all} rows")
 
-        # 3. Search
-        step(page, "3. Search for 'engineer'")
-        page.fill("#q", "engineer")
+        # 3. Search — the count the UI reports must equal the API for that query,
+        #    and searching a rare term must return fewer than the unfiltered set.
+        step(page, "3. Search for 'avionics'")
+        all_count = page.request.get(BASE + "/api/jobs?limit=1").json()["total"]
+        page.fill("#q", "avionics")
         page.wait_for_timeout(1200)
-        check("library: search returns results", page.locator(".job").count() > 0,
-              f"{page.locator('.job').count()} rows")
+        ui_count = int((page.locator("#count").inner_text().split()[0]) or 0)
+        api_count = page.request.get(BASE + "/api/jobs?limit=1&q=avionics").json()["total"]
+        check("library: search count matches API", ui_count == api_count,
+              f"ui={ui_count} api={api_count}")
+        check("library: search narrows the set", 0 < api_count < all_count,
+              f"{api_count} of {all_count}")
         page.fill("#q", "")
         page.wait_for_timeout(900)
 
-        # 4. Competitor filter
+        # 4. Competitor filter — UI count must equal the API count, and every
+        #    visible row must carry the competitor badge.
         step(page, "4. Filter to competitors only")
         click(page, ".chip.comp")
         page.wait_for_timeout(1000)
-        check("library: competitor filter active",
-              "on" in (page.locator(".chip.comp").get_attribute("class") or ""))
-        check("library: competitor rows shown", page.locator(".job").count() > 0,
-              f"{page.locator('.job').count()} rows")
+        ui_n = page.locator(".job").count()
+        api_n = page.request.get(BASE + "/api/jobs?limit=500&competitor=1").json()["total"]
+        check("library: competitor count matches API", ui_n == api_n, f"ui={ui_n} api={api_n}")
+        badges = page.locator(".job .badge.comp").count()
+        check("library: every competitor row is badged", badges == ui_n, f"{badges}/{ui_n}")
         click(page, ".chip.comp")   # toggle off
         page.wait_for_timeout(700)
 
@@ -141,12 +149,16 @@ def run():
         click(page, ".chip.new")
         page.wait_for_timeout(600)
 
-        # 6. Sort by score
-        step(page, "6. Sort by AI score")
+        # 6. Sort by score — the rendered score badges must be non-increasing.
+        step(page, "6. Show scored, then sort by AI score")
+        click(page, ".chip[data-f='scored']")
+        page.wait_for_timeout(500)
         click(page, "#sortscore")
         page.wait_for_timeout(900)
-        check("library: sort-by-score toggled",
-              "on" in (page.locator("#sortscore").get_attribute("class") or ""))
+        badge_txt = page.locator(".job .badge.score").all_inner_texts()
+        nums = [int(b.split("/")[0].replace("★", "").strip()) for b in badge_txt if "/" in b]
+        ordered = nums == sorted(nums, reverse=True)
+        check("library: scores render in descending order", ordered, f"{nums[:8]}")
 
         # 7. Expand a job description
         step(page, "7. Open a job to read its description")

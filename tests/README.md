@@ -1,40 +1,46 @@
-# UI end-to-end tests
+# Tests
 
-`ui_e2e.py` drives the running web app in a **real Chrome window** so you can watch
-it: it moves the mouse, draws a red ring where it clicks, and shows a caption for
-each step. Covers landing page, navigation, library search/filter/sort, job
-expand, Run Center command building, dashboard and command builder.
+Two layers: a rigorous **deterministic pytest suite** (exact assertions against a
+seeded, isolated database) and a **watchable Chrome demo** you can run to see it
+click through the app.
 
-## Run it (watch it live)
-1. Start the app in one terminal:
-   ```
-   python -m jobsdb.app          # http://localhost:5000
-   ```
-2. In another terminal:
-   ```
-   python tests/ui_e2e.py        # opens Chrome, runs slowly, visible clicks
-   ```
+## 1. Deterministic suite (pytest)
 
-A Chrome window opens, walks through 12 steps, and prints `PASS/FAIL` per check
-plus a final `N/N checks passed`.
+Runs against a separate database `aalto_jobs_test` (never touches real data),
+seeded with 12 hand-checked rows (`seed.py`) so every assertion is exact.
 
-## Options (environment variables)
-| Var | Default | Meaning |
-|-----|---------|---------|
-| `BASE_URL` | `http://localhost:5000` | app under test |
-| `HEADLESS` | unset | `1` = no window (for CI) |
-| `SLOWMO` | `550` | ms between actions — raise to watch more slowly |
-
-Examples:
 ```
-SLOWMO=900 python tests/ui_e2e.py     # slower, easier to follow
-HEADLESS=1 python tests/ui_e2e.py     # fast, no window, exit code = result
+python -m pytest tests -q --ignore=tests/ui_e2e.py
 ```
 
-## Requirements
+- **`test_api.py`** — the API contract is *correct*, not just present:
+  competitor/new/scored/min-score/source filters return exactly the right rows;
+  full-text search is relevant; `sort=score` is truly descending; `/api/stats`
+  math is consistent; CSV export and `/api/analysis.json` match the filter;
+  run-dispatch validation.
+- **`test_actions.py`** — running a task *actually mutates the DB*: the AI
+  scoring task (LLM stubbed with a deterministic scorer) scores the unscored
+  rows, respects `competitor_only`, and writes scores + reasons.
+- **`test_e2e.py`** — launches a real server on the seeded DB and cross-checks
+  what the **UI renders** against the known data: row counts per filter, badge
+  presence, search relevance, min-score subset, descending score order, expand.
+
+Requirements: `pytest`, `playwright` (+ `python -m playwright install chromium`),
+and the Docker test DB reachable (defaults: `localhost:5433`, `postgres`/`aalto`).
+Point elsewhere with `PGHOST/PGPORT/PGUSER/PGPASSWORD` or `TEST_PGDATABASE`.
+
+## 2. Watchable Chrome demo (`ui_e2e.py`)
+
+Drives the **running** app in a real Chrome window — moves the mouse, rings each
+click, captions each step — and cross-checks the UI against the live API as it
+goes (competitor count == API, search count == API, scores descending, …).
+
 ```
-pip install playwright
-python -m playwright install chromium   # or: install chrome
+python -m jobsdb.app          # terminal 1 (http://localhost:5000)
+python tests/ui_e2e.py        # terminal 2 — watch it run
+SLOWMO=900 python tests/ui_e2e.py     # slower
+HEADLESS=1 python tests/ui_e2e.py     # no window
 ```
-Uses your installed Google Chrome if present, otherwise Playwright's bundled Chromium.
-Exit code is `0` when every check passes, `1` otherwise.
+
+Prints `PASS/FAIL` per check and a final `N/N checks passed`.
+Watch the deterministic E2E instead with: `HEADED=1 python -m pytest tests/test_e2e.py`.
