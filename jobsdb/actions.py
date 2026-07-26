@@ -47,7 +47,8 @@ def start(kind, **kwargs):
             return None
         _running_kinds.add(kind)
     tid = _new_task(kind)
-    fn = {"refresh": _run_refresh, "ai": _run_ai}.get(kind)
+    fn = {"refresh": _run_refresh, "ai": _run_ai, "scrape": _run_scrape,
+          "analyze": _run_analyze, "pipeline": _run_pipeline}.get(kind)
     if not fn:
         _finish(tid, False, f"unknown task '{kind}'")
         _running_kinds.discard(kind)
@@ -79,6 +80,62 @@ def _run_refresh(tid, no_linkedin=False):
                    capture_output=True, text=True, timeout=1800)
     TASKS[tid]["progress"] = 100
     _finish(tid, True, "jobs refreshed and ingested")
+
+
+# --- Scrape all websites: run.py orchestrator, then ingest --------------------
+def _run_scrape(tid, location="London", time_range="48h", workers=4, scope="all"):
+    py = sys.executable
+    TASKS[tid]["message"] = f"scraping all websites ({location}, {time_range})…"
+    cmd = [py, str(BASE_DIR / "run.py"), "--location", location,
+           "--time-range", time_range, "--workers", str(workers)]
+    if scope == "linkedin":
+        cmd.append("--linkedin-only")
+    elif scope == "workday":
+        cmd.append("--workday-only")
+    TASKS[tid]["cmd"] = " ".join(cmd)
+    subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True, timeout=3600)
+    TASKS[tid]["progress"] = 80
+    TASKS[tid]["message"] = "ingesting into database…"
+    subprocess.run([py, "-m", "jobsdb.ingest"], cwd=str(BASE_DIR),
+                   capture_output=True, text=True, timeout=1800)
+    TASKS[tid]["progress"] = 100
+    _finish(tid, True, "scraping complete and ingested")
+
+
+# --- Analyze: file-based AI analysis via analyze.py (Dashboard-compatible) -----
+def _run_analyze(tid, backend="claude", model="haiku", min_score=7, limit=None):
+    py = sys.executable
+    TASKS[tid]["message"] = f"analysing latest jobs ({backend}/{model})…"
+    cmd = [py, str(BASE_DIR / "analyze.py"), "--backend", backend, "--model", model,
+           "--min-score", str(min_score)]
+    if limit:
+        cmd += ["--limit", str(limit)]
+    TASKS[tid]["cmd"] = " ".join(cmd)
+    r = subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True, timeout=3600)
+    TASKS[tid]["progress"] = 100
+    ok = r.returncode == 0
+    _finish(tid, ok, "analysis complete" if ok else f"analyze error: {r.stderr[:160]}")
+
+
+# --- Full pipeline: scrape everything, analyse, ingest (one command) ----------
+def _run_pipeline(tid, location="London", time_range="48h", workers=4,
+                  backend="claude", model="haiku", min_score=7):
+    py = sys.executable
+    TASKS[tid]["message"] = "1/3 scraping all websites…"
+    subprocess.run([py, str(BASE_DIR / "run.py"), "--location", location,
+                    "--time-range", time_range, "--workers", str(workers)],
+                   cwd=str(BASE_DIR), capture_output=True, text=True, timeout=3600)
+    TASKS[tid]["progress"] = 40
+    TASKS[tid]["message"] = "2/3 AI analysis…"
+    subprocess.run([py, str(BASE_DIR / "analyze.py"), "--backend", backend,
+                    "--model", model, "--min-score", str(min_score)],
+                   cwd=str(BASE_DIR), capture_output=True, text=True, timeout=3600)
+    TASKS[tid]["progress"] = 80
+    TASKS[tid]["message"] = "3/3 ingesting into database…"
+    subprocess.run([py, "-m", "jobsdb.ingest"], cwd=str(BASE_DIR),
+                   capture_output=True, text=True, timeout=1800)
+    TASKS[tid]["progress"] = 100
+    _finish(tid, True, "full pipeline complete")
 
 
 # --- AI filter: score jobs vs the target CV/profile ---------------------------

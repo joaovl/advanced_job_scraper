@@ -58,8 +58,18 @@ def _where(args):
 
 
 @app.route("/")
-def index():
+def home():
+    return render_template("home.html")
+
+
+@app.route("/library")
+def library():
     return render_template("index.html")
+
+
+@app.route("/run")
+def run_center():
+    return render_template("run.html")
 
 
 @app.route("/dashboard")
@@ -149,7 +159,7 @@ def api_job(job_id):
 
 @app.route("/api/run/<kind>", methods=["POST"])
 def run_task(kind):
-    if kind not in ("refresh", "ai"):
+    if kind not in ("refresh", "ai", "scrape", "analyze", "pipeline"):
         return jsonify({"error": "unknown task"}), 400
     opts = request.get_json(silent=True) or {}
     tid = actions.start(kind, **opts)
