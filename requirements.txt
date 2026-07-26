@@ -12,3 +12,8 @@ openpyxl>=3.1.0
 
 # Optional: File watching for auto-processing
 watchdog>=2.1.0      # For watch_exports.py
+
+# jobsdb (Postgres + web UI + monitor)
+Flask>=3.0
+SQLAlchemy>=2.0
+psycopg2-binary>=2.9

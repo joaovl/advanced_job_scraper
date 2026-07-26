@@ -6,25 +6,18 @@ Scrapes job listings from companies using Workday's career platform.
 The Workday API follows a consistent pattern across companies.
 
 Usage:
-    python scrapers/workday_scraper.py --all --search London           # All companies sequentially
-    python scrapers/workday_scraper.py --all --search London --parallel  # All companies in parallel
-    python scrapers/workday_scraper.py --all -p -w 10                  # Parallel with 10 workers
-    python scrapers/workday_scraper.py --company nvidia --search UK    # Specific company
-    python scrapers/workday_scraper.py --list                          # List available companies
-    python scrapers/workday_scraper.py --test nvidia                   # Test API endpoint
+    python scrapers/workday_scraper.py                    # Run all configured companies
+    python scrapers/workday_scraper.py --company nvidia   # Run specific company
+    python scrapers/workday_scraper.py --list             # List available companies
+    python scrapers/workday_scraper.py --test nvidia      # Test API endpoint
 """
 
 import json
 import requests
 import argparse
 import time
-import os
 from pathlib import Path
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
-# For I/O-bound tasks, use more threads than CPUs (they're mostly waiting on network)
-DEFAULT_WORKERS = max(10, (os.cpu_count() or 4) * 2)
 
 BASE_DIR = Path(__file__).parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
@@ -578,6 +571,37 @@ WORKDAY_COMPANIES = {
         "careers_url": "https://brompton.wd3.myworkdayjobs.com/en-US/Brompton",
         "location_filter": [],
     },
+    # --- Aerospace / defence primes (verified Workday endpoints) ---
+    "airbus": {
+        "name": "Airbus",
+        "api_url": "https://ag.wd3.myworkdayjobs.com/wday/cxs/ag/Airbus/jobs",
+        "careers_url": "https://ag.wd3.myworkdayjobs.com/en-US/Airbus",
+        "location_filter": [],
+    },
+    "rtx_collins": {
+        "name": "RTX / Collins Aerospace",
+        "api_url": "https://globalhr.wd5.myworkdayjobs.com/wday/cxs/globalhr/REC_RTX_Ext_Gateway/jobs",
+        "careers_url": "https://globalhr.wd5.myworkdayjobs.com/en-US/REC_RTX_Ext_Gateway",
+        "location_filter": [],
+    },
+    "thales": {
+        "name": "Thales",
+        "api_url": "https://thales.wd3.myworkdayjobs.com/wday/cxs/thales/Careers/jobs",
+        "careers_url": "https://thales.wd3.myworkdayjobs.com/en-US/Careers",
+        "location_filter": [],
+    },
+    "boeing": {
+        "name": "Boeing",
+        "api_url": "https://boeing.wd1.myworkdayjobs.com/wday/cxs/boeing/External_Careers/jobs",
+        "careers_url": "https://boeing.wd1.myworkdayjobs.com/en-US/External_Careers",
+        "location_filter": [],
+    },
+    "northrop_grumman": {
+        "name": "Northrop Grumman",
+        "api_url": "https://ngc.wd1.myworkdayjobs.com/wday/cxs/ngc/Northrop_Grumman_External_Site/jobs",
+        "careers_url": "https://ngc.wd1.myworkdayjobs.com/en-US/Northrop_Grumman_External_Site",
+        "location_filter": [],
+    },
 }
 
 # Common headers for Workday API
@@ -588,7 +612,45 @@ HEADERS = {
 }
 
 
-def fetch_jobs(company_key: str, config: dict, location_search: str = None, max_jobs: int = 500, quiet: bool = False) -> list:
+def _walk_facet(values, param, match):
+    """Recursively search a Workday facet tree for a value whose descriptor matches.
+
+    Workday nests location facets: locationMainGroup -> locationCountry -> [values].
+    Returns the facet value id, or None.
+    """
+    for v in values or []:
+        if v.get("facetParameter") == param:
+            for x in v.get("values", []):
+                if match(x.get("descriptor", "")):
+                    return x.get("id")
+        child = _walk_facet(v.get("values"), param, match)
+        if child:
+            return child
+    return None
+
+
+def get_location_facet_id(config: dict, country: str = "United Kingdom") -> str:
+    """Discover the locationCountry facet id for a country in this tenant.
+
+    Facet ids are tenant-specific GUIDs, so we probe the live API with an empty
+    query and read the returned facet tree. Returns the id or None.
+    """
+    try:
+        r = requests.post(
+            config["api_url"], headers=HEADERS,
+            json={"appliedFacets": {}, "limit": 1, "offset": 0, "searchText": ""},
+            timeout=30,
+        )
+        r.raise_for_status()
+        facets = r.json().get("facets", [])
+        return _walk_facet(facets, "locationCountry", lambda d: country in d)
+    except requests.RequestException as e:
+        print(f"  Could not read facets: {e}")
+        return None
+
+
+def fetch_jobs(company_key: str, config: dict, location_search: str = None,
+               max_jobs: int = 500, applied_facets: dict = None) -> list:
     """Fetch all jobs from a Workday company API."""
     jobs = []
     offset = 0
@@ -606,8 +668,11 @@ def fetch_jobs(company_key: str, config: dict, location_search: str = None, max_
     if config.get("location_filter"):
         payload["appliedFacets"]["locationCountry"] = config["location_filter"]
 
-    if not quiet:
-        print(f"Fetching jobs from {config['name']}...")
+    # Merge any caller-supplied facets (e.g. discovered UK location id)
+    if applied_facets:
+        payload["appliedFacets"].update(applied_facets)
+
+    print(f"Fetching jobs from {config['name']}...")
 
     while offset < max_jobs:
         payload["offset"] = offset
@@ -646,8 +711,7 @@ def fetch_jobs(company_key: str, config: dict, location_search: str = None, max_
                     "job_category": job.get("jobCategory", ""),
                 })
 
-            if not quiet:
-                print(f"  Fetched {len(jobs)}/{total} jobs...")
+            print(f"  Fetched {len(jobs)}/{total} jobs...")
 
             if len(job_postings) < limit:
                 break
@@ -656,8 +720,7 @@ def fetch_jobs(company_key: str, config: dict, location_search: str = None, max_
             time.sleep(0.5)  # Rate limiting
 
         except requests.RequestException as e:
-            if not quiet:
-                print(f"  Error fetching jobs: {e}")
+            print(f"  Error fetching jobs: {e}")
             break
 
     return jobs
@@ -693,26 +756,34 @@ def fetch_job_details(company_key: str, config: dict, external_path: str) -> dic
         return {"description": "", "error": str(e)}
 
 
-def scrape_company(company_key: str, location_search: str = None, fetch_descriptions: bool = True, quiet: bool = False) -> dict:
-    """Scrape all jobs for a company. Use quiet=True for parallel execution."""
+def scrape_company(company_key: str, location_search: str = None, fetch_descriptions: bool = True,
+                   uk_only: bool = False, country: str = "United Kingdom") -> dict:
+    """Scrape all jobs for a company."""
     if company_key not in WORKDAY_COMPANIES:
-        if not quiet:
-            print(f"Unknown company: {company_key}")
+        print(f"Unknown company: {company_key}")
         return None
 
     config = WORKDAY_COMPANIES[company_key]
 
-    if not quiet:
-        print("=" * 60)
-        print(f"{config['name'].upper()} JOB SCRAPER (Workday API)")
-        print("=" * 60)
+    print("=" * 60)
+    print(f"{config['name'].upper()} JOB SCRAPER (Workday API)")
+    print("=" * 60)
+
+    # Optionally hard-filter to a country via the tenant's location facet
+    applied_facets = None
+    if uk_only:
+        loc_id = get_location_facet_id(config, country)
+        if loc_id:
+            applied_facets = {"locationCountry": [loc_id]}
+            print(f"Applying location filter: {country} ({loc_id})")
+        else:
+            print(f"Warning: no '{country}' location facet found; scraping all locations.")
 
     # Fetch job listings
-    jobs = fetch_jobs(company_key, config, location_search, quiet=quiet)
+    jobs = fetch_jobs(company_key, config, location_search, applied_facets=applied_facets)
 
     if not jobs:
-        if not quiet:
-            print("No jobs found.")
+        print("No jobs found.")
         return {
             "company": config["name"],
             "scraped_at": datetime.now().isoformat(),
@@ -721,8 +792,7 @@ def scrape_company(company_key: str, location_search: str = None, fetch_descript
             "jobs": []
         }
 
-    if not quiet:
-        print(f"\nFound {len(jobs)} jobs")
+    print(f"\nFound {len(jobs)} jobs")
 
     # Build full job URLs
     careers_base = config["careers_url"]
@@ -734,13 +804,11 @@ def scrape_company(company_key: str, location_search: str = None, fetch_descript
 
     # Fetch descriptions and additional details
     if fetch_descriptions:
-        if not quiet:
-            print("\nFetching job descriptions and details...")
+        print("\nFetching job descriptions and details...")
         desc_count = 0
         for i, job in enumerate(jobs):
             if job.get("external_path"):
-                if not quiet:
-                    print(f"  [{i+1}/{len(jobs)}] {job['title'][:50]}...")
+                print(f"  [{i+1}/{len(jobs)}] {job['title'][:50]}...")
                 details = fetch_job_details(company_key, config, job["external_path"])
                 if details.get("description"):
                     job["description"] = details["description"]
@@ -760,8 +828,7 @@ def scrape_company(company_key: str, location_search: str = None, fetch_descript
             else:
                 job["description"] = ""
 
-        if not quiet:
-            print(f"\nFetched {desc_count}/{len(jobs)} descriptions")
+        print(f"\nFetched {desc_count}/{len(jobs)} descriptions")
     else:
         for job in jobs:
             job["description"] = ""
@@ -843,9 +910,8 @@ def main():
     parser.add_argument("--search", "-s", help="Search text (e.g., 'London', 'Engineer')")
     parser.add_argument("--no-desc", action="store_true", help="Skip fetching descriptions")
     parser.add_argument("--all", "-a", action="store_true", help="Scrape all companies")
-    parser.add_argument("--parallel", "-p", action="store_true", help="Scrape companies in parallel")
-    parser.add_argument("--workers", "-w", type=int, default=DEFAULT_WORKERS,
-                        help=f"Number of parallel workers (default: {DEFAULT_WORKERS})")
+    parser.add_argument("--uk", action="store_true", help="Hard-filter to UK roles via location facet")
+    parser.add_argument("--country", default="United Kingdom", help="Country for --uk filter (default: United Kingdom)")
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -872,89 +938,36 @@ def main():
         print("Use --list to see available companies")
         return
 
-    def process_company(company_key, quiet=False):
-        """Process a single company and save results."""
+    for company_key in companies_to_scrape:
         result = scrape_company(
             company_key,
             location_search=args.search,
             fetch_descriptions=not args.no_desc,
-            quiet=quiet
+            uk_only=args.uk,
+            country=args.country,
         )
 
         if result and result["total_jobs"] > 0:
+            # Save output
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_file = OUTPUT_DIR / f"{company_key}_workday_{timestamp}.json"
 
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
 
-            return company_key, result["total_jobs"], result.get("jobs_with_description", 0), output_file
-        return company_key, 0, 0, None
+            print(f"\nSaved to {output_file}")
 
-    if args.parallel and len(companies_to_scrape) > 1:
-        # Parallel execution with clean output
-        print(f"\nScraping {len(companies_to_scrape)} companies in PARALLEL ({args.workers} workers)...")
-        print("-" * 60)
-        results_summary = []
-        completed = 0
-
-        with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            futures = {executor.submit(process_company, key, quiet=True): key for key in companies_to_scrape}
-
-            for future in as_completed(futures):
-                company_key = futures[future]
-                completed += 1
-                try:
-                    key, count, desc_count, output_file = future.result()
-                    results_summary.append((key, count, desc_count, output_file))
-                    name = WORKDAY_COMPANIES[key]['name']
-                    if count > 0:
-                        print(f"[{completed:3}/{len(companies_to_scrape)}] {name:30} {count:4} jobs ({desc_count} with desc)")
-                    else:
-                        print(f"[{completed:3}/{len(companies_to_scrape)}] {name:30}    0 jobs")
-                except Exception as e:
-                    print(f"[{completed:3}/{len(companies_to_scrape)}] {company_key:30} ERROR: {str(e)[:30]}")
-                    results_summary.append((company_key, 0, 0, None))
-
-        # Final summary
-        print("-" * 60)
-        total_jobs = sum(r[1] for r in results_summary)
-        total_desc = sum(r[2] for r in results_summary)
-        successful = sum(1 for r in results_summary if r[1] > 0)
-        failed = len(companies_to_scrape) - successful
-        print(f"DONE: {successful} companies, {total_jobs} jobs ({total_desc} with descriptions)")
-        if failed > 0:
-            print(f"FAILED: {failed} companies")
-    else:
-        # Sequential execution
-        for company_key in companies_to_scrape:
-            result = scrape_company(
-                company_key,
-                location_search=args.search,
-                fetch_descriptions=not args.no_desc
-            )
-
-            if result and result["total_jobs"] > 0:
-                # Save output
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_file = OUTPUT_DIR / f"{company_key}_workday_{timestamp}.json"
-
-                with open(output_file, 'w', encoding='utf-8') as f:
-                    json.dump(result, f, indent=2, ensure_ascii=False)
-
-                print(f"\nSaved to {output_file}")
-
-                # Summary
-                print("\n" + "=" * 60)
-                print("SUMMARY")
-                print("=" * 60)
-                for job in result["jobs"][:5]:
-                    print(f"- {job['title'][:40]}")
-                    print(f"  {job['location']}")
-                    if job.get("description"):
-                        print(f"  {job['description'][:50]}...")
-                if len(result["jobs"]) > 5:
-                    print(f"\n... and {len(result['jobs']) - 5} more jobs")
+            # Summary
+            print("\n" + "=" * 60)
+            print("SUMMARY")
+            print("=" * 60)
+            for job in result["jobs"][:5]:
+                print(f"- {job['title'][:40]}")
+                print(f"  {job['location']}")
+                if job.get("description"):
+                    print(f"  {job['description'][:50]}...")
+            if len(result["jobs"]) > 5:
+                print(f"\n... and {len(result['jobs']) - 5} more jobs")
 
 
 if __name__ == "__main__":
