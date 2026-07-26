@@ -8,27 +8,31 @@ from sqlalchemy import text
 
 from .db import get_engine, init_schema
 from .salary import parse_salary
+from .location import normalize_country
 
 
 def main():
     engine = get_engine(create_db_if_missing=True)
     init_schema(engine)
     with engine.connect() as c:
-        rows = c.execute(text("SELECT id, description FROM jobs")).fetchall()
+        rows = c.execute(text("SELECT id, description, location FROM jobs")).fetchall()
 
-    parsed = 0
+    parsed = countries = 0
     with engine.begin() as c:
-        for jid, desc in rows:
+        for jid, desc, loc in rows:
+            country = normalize_country(loc)
+            if country:
+                countries += 1
             s = parse_salary(desc)
-            if not s:
-                continue
+            if s:
+                parsed += 1
             c.execute(text(
                 "UPDATE jobs SET salary_min=:mn, salary_max=:mx, "
-                "salary_currency=:cur, salary_period=:per WHERE id=:i"),
-                {"mn": s["min"], "mx": s["max"], "cur": s["currency"],
-                 "per": s["period"], "i": jid})
-            parsed += 1
-    print(f"Salary parsed for {parsed}/{len(rows)} jobs.")
+                "salary_currency=:cur, salary_period=:per, job_country=:ct WHERE id=:i"),
+                {"mn": s["min"] if s else None, "mx": s["max"] if s else None,
+                 "cur": s["currency"] if s else None, "per": s["period"] if s else None,
+                 "ct": country, "i": jid})
+    print(f"Salary parsed for {parsed}/{len(rows)} jobs; country set for {countries}.")
 
 
 if __name__ == "__main__":

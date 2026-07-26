@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 from jobsdb.db import jobs, metadata, init_schema
 from jobsdb.salary import parse_salary
+from jobsdb.location import normalize_country
 
 NOW = datetime(2026, 7, 26, tzinfo=timezone.utc)
 
@@ -24,6 +25,23 @@ SEED = [
     ("Roku",          "Senior Software Engineer",    "LinkedIn", False, True,  None, "C++ embedded media platform software."),
     ("RTX / Collins", "Principal Software Engineer", "Workday",  False, False, None, "Foundation software, LynxOS-178, obsolescence."),
     ("Airbus",        "Data Engineer",               "Workday",  False, False, None, "Data pipelines in python, not embedded."),
+]
+
+
+# Per-row locations (index-aligned with SEED); drive job_country normalisation.
+LOCATIONS = [
+    "Bristol, England, United Kingdom",      # 0 BAE       UK
+    "Alton, England, United Kingdom",        # 1 Prismatic UK
+    "Yeovil, England, United Kingdom",       # 2 Leonardo  UK
+    "Moriarty, NM",                          # 3 Sceye     US
+    "United States-Iowa-Cedar Rapids",       # 4 Airbus    US
+    "Cheadle, England, United Kingdom",      # 5 Thales    UK
+    "United States-Washington-Seattle",      # 6 Boeing    US
+    "United States-Florida-Melbourne",       # 7 Northrop  US
+    "London Area, United Kingdom",           # 8 Wise      UK
+    "Cambridge, England, United Kingdom",    # 9 Roku      UK
+    "United States-Iowa-Cedar Rapids",       # 10 RTX      US
+    "Toulouse Area",                         # 11 Airbus   France
 ]
 
 
@@ -46,20 +64,23 @@ def seed(engine):
             key = f"seed://{i}"
             match = (score is not None and score >= 7)
             sal = parse_salary(desc) or {}
+            loc = LOCATIONS[i]
+            country = normalize_country(loc)
             c.execute(text(
                 "INSERT INTO jobs (job_key, source, company, title, location, url, "
                 "description, competitor, is_competitor, status, is_new, ai_score, "
                 "ai_match, ai_reasons, salary_min, salary_max, salary_currency, "
-                "salary_period, first_seen, last_seen, search) VALUES "
+                "salary_period, job_country, first_seen, last_seen, search) VALUES "
                 "(:k,:src,:co,:t,:loc,:u,:d,:comp,:isc,'open',:new,:sc,:m,:rz,"
-                ":smin,:smax,:scur,:sper,:fs,:ls, to_tsvector('english', :ft))"),
-                {"k": key, "src": src, "co": co, "t": title, "loc": "UK",
+                ":smin,:smax,:scur,:sper,:ct,:fs,:ls, to_tsvector('english', :ft))"),
+                {"k": key, "src": src, "co": co, "t": title, "loc": loc,
                  "u": f"https://example.test/{i}", "d": desc,
                  "comp": co if comp else "", "isc": comp, "new": new,
                  "sc": score, "m": (match if score is not None else None),
                  "rz": ("strong match" if match else "") if score is not None else None,
                  "smin": sal.get("min"), "smax": sal.get("max"),
                  "scur": sal.get("currency"), "sper": sal.get("period"),
+                 "ct": country,
                  "fs": NOW, "ls": NOW, "ft": f"{co} {title} {desc}"})
             rows.append({"i": i, "company": co, "title": title, "source": src,
                          "is_competitor": comp, "is_new": new, "ai_score": score,
@@ -74,6 +95,8 @@ EXPECT = {
     "new": 5,                 # rows 0,1,4,5,9
     "scored": 9,              # rows with ai_score not None
     "matched": 5,             # score >= 7: rows 0,1,2,4,5
+    "uk": 6,                  # job_country United Kingdom: rows 0,1,2,5,8,9
+    "us": 5,                  # rows 3,4,6,7,10
     "salaried": 2,            # rows 0 (GBP 70-90k) and 4 (USD 120-150k)
     "fpga": 2,                # 'FPGA' in text: rows 0,1
     "min8": 4,                # ai_score >= 8: rows 0,1,4,5

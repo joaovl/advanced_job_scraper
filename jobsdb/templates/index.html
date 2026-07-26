@@ -80,10 +80,10 @@
 </header>
 <div class="actions"> <button class="btn" id="btn-refresh">Refresh jobs</button> <button class="btn" id="btn-ai">AI score</button> <select id="ai-backend" title="AI backend"> <option value="claude">Claude (haiku)</option> <option value="ollama">Ollama (local)</option> </select> <label style="font-size:12px;color:var(--soft)"><input type="checkbox" id="ai-comp"> competitors only</label> <div class="prog" id="prog"><i id="progbar"></i></div> <span class="pmsg" id="pmsg"></span>
 </div>
-<div class="layout"> <aside> <h3>Companies</h3> <div id="companies"></div> </aside> <main> <div class="controls"> <input id="q" type="search" placeholder="Search title, company, description…"> <span class="chip comp" data-f="competitor">Competitors</span> <span class="chip new" data-f="new">New</span> <span class="chip" data-f="scored">Scored</span> <select id="minscore" title="Minimum AI score"> <option value="">Any score</option> <option value="9">≥ 9</option><option value="8">≥ 8</option> <option value="7">≥ 7</option><option value="6">≥ 6</option> </select> <span class="chip" id="sortscore">Sort by score</span> <span class="chip" id="sortpay">Sort by pay</span> <label class="chip" style="cursor:default"><input type="checkbox" id="haspay" style="margin-right:5px">Has pay</label> <button class="exp" id="export">Export CSV</button> </div> <div class="count" id="count"></div> <div id="results"><div class="loading">Loading…</div></div> </main>
+<div class="layout"> <aside> <h3>Companies</h3> <div id="companies"></div> </aside> <main> <div class="controls"> <input id="q" type="search" placeholder="Search title, company, description…"> <span class="chip comp" data-f="competitor">Competitors</span> <span class="chip new" data-f="new">New</span> <span class="chip" data-f="scored">Scored</span> <select id="country" title="Country"><option value="">All countries</option></select> <select id="minscore" title="Minimum AI score"> <option value="">Any score</option> <option value="9">≥ 9</option><option value="8">≥ 8</option> <option value="7">≥ 7</option><option value="6">≥ 6</option> </select> <span class="chip" id="sortscore">Sort by score</span> <span class="chip" id="sortpay">Sort by pay</span> <label class="chip" style="cursor:default"><input type="checkbox" id="haspay" style="margin-right:5px">Has pay</label> <button class="exp" id="export">Export CSV</button> </div> <div class="count" id="count"></div> <div id="results"><div class="loading">Loading…</div></div> </main>
 </div>
 <script>
-const state = {q:"", company:"", competitor:false, new:false, scored:false,
+const state = {q:"", company:"", country:"", competitor:false, new:false, scored:false,
  has_pay:false, min_score:"", sort:"", status:"open"};
 const $ = s => document.querySelector(s);
 
@@ -91,6 +91,7 @@ function qs(){
  const p = new URLSearchParams();
  if(state.q) p.set("q", state.q);
  if(state.company) p.set("company", state.company);
+ if(state.country) p.set("country", state.country);
  if(state.competitor) p.set("competitor","1");
  if(state.new) p.set("new","1");
  if(state.scored) p.set("scored","1");
@@ -112,6 +113,7 @@ async function loadStats(){
  `<div class="stat new"><b>${s.matched||0}</b> matched</div>`+
  `<div class="stat"><b>${s.companies}</b> companies</div>`;
  $("#companies").innerHTML = d.companies.map(c=> `<div class="co ${c.comp?'comp':''}" data-co="${encodeURIComponent(c.company)}"> <span class="name">${c.company}</span><span class="n">${c.n}</span></div>`).join("");
+ const csel=$("#country"); if(csel && csel.options.length<=1){ (d.countries||[]).forEach(c=>{ const o=document.createElement("option"); o.value=c.country; o.textContent=`${c.country} (${c.n})`; csel.appendChild(o); }); }
  document.querySelectorAll(".co").forEach(el=>el.onclick=()=>{
  const co = decodeURIComponent(el.dataset.co);
  state.company = state.company===co ? "" : co;
@@ -208,6 +210,7 @@ function setSort(s){ state.sort = state.sort===s ? "" : s;
 $("#sortscore").onclick = ()=> setSort("score");
 $("#sortpay").onclick = ()=> setSort("salary");
 $("#haspay").onchange = e=>{ state.has_pay = e.target.checked; load(); };
+$("#country").onchange = e=>{ state.country = e.target.value; load(); };
 
 loadStats(); load();
 </script>

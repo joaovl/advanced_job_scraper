@@ -125,11 +125,27 @@ def test_sort_by_salary_descending(client):
     assert sal == sorted(sal, reverse=True)
 
 
+def test_country_filter(client, seeded):
+    assert rows(client, "country=United+Kingdom")["total"] == seeded["expect"]["uk"]
+    d = rows(client, "country=United+Kingdom")
+    assert all(r["company"] for r in d["rows"])   # sanity: rows returned
+    assert rows(client, "country=United+States")["total"] == seeded["expect"]["us"]
+
+
 def test_salaries_endpoint(client):
     d = client.get("/api/salaries").get_json()
     assert {c["currency"] for c in d["currencies"]} == {"GBP", "USD"}
     assert d["currency"] in ("GBP", "USD")
     assert all("median" in lv for lv in d["by_level"])
+    # by_location present with country names
+    assert any(x["country"] for x in d["by_location"])
+
+
+def test_salaries_uk_only(client):
+    d = client.get("/api/salaries?country=United+Kingdom&currency=GBP").get_json()
+    locs = {x["country"] for x in d["by_location"]}
+    assert locs == {"United Kingdom"}             # UK filter really isolates UK
+    assert d["by_location"][0]["median"] is not None
 
 
 def test_stats_reports_salaried(client, seeded):

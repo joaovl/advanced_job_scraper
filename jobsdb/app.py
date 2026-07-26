@@ -85,6 +85,9 @@ def _where(args):
     if args.get("company"):
         clauses.append("company = :company")
         params["company"] = args["company"]
+    if args.get("country"):
+        clauses.append("job_country = :country")
+        params["country"] = args["country"]
     if args.get("competitor") == "1":
         clauses.append("is_competitor = true")
     if args.get("new") == "1":
@@ -165,8 +168,13 @@ def stats():
         companies = c.execute(text(
             "SELECT company, count(*) n, bool_or(is_competitor) comp "
             "FROM jobs WHERE status='open' GROUP BY company ORDER BY n DESC")).mappings().all()
+        countries = c.execute(text(
+            "SELECT job_country country, count(*) n FROM jobs "
+            "WHERE status='open' AND job_country IS NOT NULL "
+            "GROUP BY job_country ORDER BY n DESC")).mappings().all()
     return jsonify({"summary": dict(row),
-                    "companies": [dict(x) for x in companies]})
+                    "companies": [dict(x) for x in companies],
+                    "countries": [dict(x) for x in countries]})
 
 
 @app.route("/api/salaries")
@@ -200,10 +208,17 @@ def api_salaries():
             f"round(percentile_cont(0.5) WITHIN GROUP (ORDER BY {mid})) median "
             f"{cond} AND salary_currency = :cur GROUP BY company "
             "HAVING count(*) >= 1 ORDER BY median DESC NULLS LAST LIMIT 15"), p).mappings().all()
+        by_location = c.execute(text(
+            f"SELECT COALESCE(job_country, 'Unknown') country, count(*) n, "
+            f"round(percentile_cont(0.5) WITHIN GROUP (ORDER BY {mid})) median, "
+            f"min(salary_min) lo, max(salary_max) hi "
+            f"{cond} AND salary_currency = :cur GROUP BY job_country "
+            "ORDER BY n DESC"), p).mappings().all()
     return jsonify({"currency": cur,
                     "currencies": [dict(x) for x in currencies],
                     "by_level": [dict(x) for x in by_level],
-                    "by_company": [dict(x) for x in by_company]})
+                    "by_company": [dict(x) for x in by_company],
+                    "by_location": [dict(x) for x in by_location]})
 
 
 @app.route("/api/jobs")

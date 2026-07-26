@@ -58,6 +58,7 @@
 
   <div class="controls">
     <input id="q" type="search" placeholder="Filter by role, e.g. principal software engineer" style="flex:1;min-width:240px">
+    <select id="country"><option value="">All locations</option></select>
     <label class="muted"><input type="checkbox" id="comp"> competitors only</label>
     <div class="cur" id="cur"></div>
   </div>
@@ -65,6 +66,11 @@
   <div class="panel">
     <h3>Overview</h3>
     <div id="overview" class="muted">Loading…</div>
+  </div>
+  <div class="panel">
+    <h3>By location (median)</h3>
+    <table><thead><tr><th>Country</th><th class="num">Jobs</th><th class="num">Median</th><th class="num">Range</th></tr></thead>
+      <tbody id="locations"></tbody></table>
   </div>
   <div class="panel">
     <h3>By seniority (median)</h3>
@@ -78,11 +84,18 @@
 </div>
 <script>
 const $=s=>document.querySelector(s);
-const state={q:"",comp:false,currency:""};
+const state={q:"",comp:false,currency:"",country:""};
 const SYM={GBP:"£",USD:"$",EUR:"€"};
 function fmt(cur,n){ if(n==null) return "–"; return (SYM[cur]||"")+Math.round(n).toLocaleString(); }
 function qs(){ const p=new URLSearchParams(); if(state.q)p.set("q",state.q);
-  if(state.comp)p.set("competitor","1"); if(state.currency)p.set("currency",state.currency); return p.toString(); }
+  if(state.comp)p.set("competitor","1"); if(state.currency)p.set("currency",state.currency);
+  if(state.country)p.set("country",state.country); return p.toString(); }
+
+fetch("/api/stats").then(r=>r.json()).then(d=>{
+  const sel=$("#country");
+  (d.countries||[]).forEach(c=>{ const o=document.createElement("option");
+    o.value=c.country; o.textContent=`${c.country} (${c.n})`; sel.appendChild(o); });
+});
 
 async function load(){
   const d=await (await fetch("/api/salaries?"+qs())).json();
@@ -105,6 +118,11 @@ async function load(){
       <div class="val">${fmt(d.currency,l.median)}</div></div>
     <div class="muted" style="margin:-4px 0 10px 132px">p25 ${fmt(d.currency,l.p25)} · p75 ${fmt(d.currency,l.p75)}</div>`).join("")
     || '<div class="muted">–</div>';
+  // locations
+  $("#locations").innerHTML=(d.by_location||[]).map(l=>
+    `<tr><td>${l.country}</td><td class="num">${l.n}</td><td class="num">${fmt(d.currency,l.median)}</td>`+
+    `<td class="num muted">${fmt(d.currency,l.lo)}–${fmt(d.currency,l.hi)}</td></tr>`).join("")
+    || '<tr><td colspan="4" class="muted">–</td></tr>';
   // companies
   $("#companies").innerHTML=d.by_company.map(c=>
     `<tr><td>${c.company}</td><td class="num">${c.n}</td><td class="num">${fmt(d.currency,c.median)}</td></tr>`).join("")
@@ -112,6 +130,7 @@ async function load(){
 }
 let t; $("#q").oninput=e=>{clearTimeout(t);state.q=e.target.value;state.currency="";t=setTimeout(load,250);};
 $("#comp").onchange=e=>{state.comp=e.target.checked;state.currency="";load();};
+$("#country").onchange=e=>{state.country=e.target.value;state.currency="";load();};
 load();
 </script>
 </body>

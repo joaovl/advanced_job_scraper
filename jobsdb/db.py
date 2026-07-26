@@ -101,6 +101,7 @@ jobs = Table(
     Column("salary_max", Integer),
     Column("salary_currency", Text),
     Column("salary_period", Text),
+    Column("job_country", Text),          # normalised from location (UK/US/...)
     Column("search", TSVECTOR),
     Column("raw", JSONB),
 )
@@ -117,10 +118,12 @@ def init_schema(engine):
         for col, typ in [("ai_score", "INTEGER"), ("ai_match", "BOOLEAN"),
                          ("ai_reasons", "TEXT"), ("ai_scored_at", "TIMESTAMPTZ"),
                          ("salary_min", "INTEGER"), ("salary_max", "INTEGER"),
-                         ("salary_currency", "TEXT"), ("salary_period", "TEXT")]:
+                         ("salary_currency", "TEXT"), ("salary_period", "TEXT"),
+                         ("job_country", "TEXT")]:
             c.execute(text(f"ALTER TABLE jobs ADD COLUMN IF NOT EXISTS {col} {typ}"))
         c.execute(text("CREATE INDEX IF NOT EXISTS idx_jobs_ai ON jobs(ai_score)"))
         c.execute(text("CREATE INDEX IF NOT EXISTS idx_jobs_salary ON jobs(salary_max)"))
+        c.execute(text("CREATE INDEX IF NOT EXISTS idx_jobs_country ON jobs(job_country)"))
 
 
 if __name__ == "__main__":
