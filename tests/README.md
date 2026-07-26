@@ -35,12 +35,26 @@ Drives the **running** app in a real Chrome window — moves the mouse, rings ea
 click, captions each step — and cross-checks the UI against the live API as it
 goes (competitor count == API, search count == API, scores descending, …).
 
+PowerShell (Windows):
+```powershell
+python -m jobsdb.app                     # terminal 1 (http://localhost:5000)
+python tests\ui_e2e.py                   # terminal 2 — watch it run
+$env:SLOWMO=900; python tests\ui_e2e.py  # slower
+$env:HEADLESS=1; python tests\ui_e2e.py  # no window
 ```
-python -m jobsdb.app          # terminal 1 (http://localhost:5000)
-python tests/ui_e2e.py        # terminal 2 — watch it run
-SLOWMO=900 python tests/ui_e2e.py     # slower
-HEADLESS=1 python tests/ui_e2e.py     # no window
+Watch the deterministic E2E in a window instead:
+```powershell
+$env:HEADED=1; python -m pytest tests\test_e2e.py
 ```
+Clear a flag afterwards with e.g. `Remove-Item Env:HEADED`.
+
+bash / Git Bash equivalent: `HEADED=1 python -m pytest tests/test_e2e.py`.
 
 Prints `PASS/FAIL` per check and a final `N/N checks passed`.
-Watch the deterministic E2E instead with: `HEADED=1 python -m pytest tests/test_e2e.py`.
+
+### Env vars
+| Var | Default | Meaning |
+|-----|---------|---------|
+| `HEADED` (pytest e2e) / `HEADLESS` (ui_e2e) | window / no-window | show the browser |
+| `SLOWMO` | `550` (demo) | ms between actions |
+| `BASE_URL` | `http://localhost:5000` | app under test (ui_e2e) |
