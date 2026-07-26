@@ -1,1409 +1,1033 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Scraper - Command Builder</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #0a66c2;
-            --primary-dark: #004182;
-            --secondary: #057642;
-            --bg-light: #f3f6f8;
-            --bg-card: #ffffff;
-            --text-primary: #191919;
-            --text-secondary: #666666;
-            --text-disabled: #aaaaaa;
-            --border: #dce6f1;
-            --success: #057642;
-            --warning: #b24020;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: var(--bg-light);
-            color: var(--text-primary);
-            min-height: 100vh;
-        }
-
-        header {
-            background: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .logo {
-            width: 36px;
-            height: 36px;
-            background: var(--primary);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        header h1 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .defaults-badge {
-            background: #e8f4fd;
-            color: var(--primary);
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        nav {
-            display: flex;
-            gap: 8px;
-            margin-left: auto;
-        }
-
-        nav a {
-            padding: 6px 14px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        nav a:hover {
-            background: var(--bg-light);
-            color: var(--primary);
-        }
-
-        nav a.active {
-            background: var(--primary);
-            color: white;
-        }
-
-        main {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px 24px;
-        }
-
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        /* Quick Actions */
-        .quick-actions {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
-
-        .quick-action-btn {
-            padding: 12px 18px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid var(--border);
-            background: var(--bg-card);
-            text-align: left;
-        }
-
-        .quick-action-btn:hover {
-            border-color: var(--primary);
-            background: rgba(10, 102, 194, 0.05);
-        }
-
-        .quick-action-btn.primary {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .quick-action-btn.primary:hover {
-            background: var(--primary-dark);
-        }
-
-        .quick-action-btn .title {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .quick-action-btn .cmd {
-            font-family: monospace;
-            font-size: 11px;
-            opacity: 0.8;
-        }
-
-        /* Section styling */
-        .section {
-            background: var(--bg-card);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-
-        .section-header {
-            background: var(--bg-light);
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .section-header h2 {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .section-header .badge {
-            background: var(--primary);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 500;
-        }
-
-        .section-body {
-            padding: 16px;
-        }
-
-        /* Two column layout */
-        .two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 900px) {
-            .two-columns {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Option cards */
-        .option-card {
-            background: var(--bg-light);
-            border-radius: 8px;
-            padding: 14px;
-            margin-bottom: 12px;
-        }
-
-        .option-card:last-child {
-            margin-bottom: 0;
-        }
-
-        .option-card h3 {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-secondary);
-            margin-bottom: 10px;
-        }
-
-        .option-row {
-            margin-bottom: 10px;
-        }
-
-        .option-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .option-row label {
-            display: block;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-
-        .option-row .flag {
-            font-size: 10px;
-            color: var(--primary);
-            font-family: monospace;
-        }
-
-        .option-row .default-value {
-            font-size: 10px;
-            color: var(--text-secondary);
-            margin-left: 4px;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        select,
-        textarea {
-            width: 100%;
-            padding: 8px 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 13px;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            font-family: inherit;
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.1);
-        }
-
-        input::placeholder {
-            color: #999;
-        }
-
-        .option-row.disabled label,
-        .option-row.disabled .flag {
-            color: var(--text-disabled);
-        }
-
-        .option-row.disabled input,
-        .option-row.disabled select {
-            background: #f5f5f5;
-            color: var(--text-disabled);
-            cursor: not-allowed;
-        }
-
-        .checkbox-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 0;
-        }
-
-        .checkbox-row input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-            accent-color: var(--primary);
-        }
-
-        .checkbox-row label {
-            margin-bottom: 0;
-            cursor: pointer;
-            font-size: 13px;
-        }
-
-        .geoid-presets {
-            display: flex;
-            gap: 4px;
-            margin-top: 6px;
-            flex-wrap: wrap;
-        }
-
-        .preset-btn {
-            padding: 4px 10px;
-            font-size: 11px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .preset-btn:hover {
-            border-color: var(--primary);
-            background: rgba(10, 102, 194, 0.05);
-        }
-
-        .preset-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        /* Command output */
-        .command-row {
-            margin-bottom: 12px;
-        }
-
-        .command-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .command-label {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 6px;
-        }
-
-        .command-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-sm {
-            padding: 4px 10px;
-            font-size: 11px;
-            border-radius: 4px;
-            background: var(--bg-light);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-            cursor: pointer;
-        }
-
-        .btn-sm:hover {
-            background: var(--border);
-        }
-
-        .btn-sm.btn-primary {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .btn-sm.btn-primary:hover {
-            background: var(--primary-dark);
-        }
-
-        .command-output {
-            background: #1e1e1e;
-            border-radius: 8px;
-            padding: 12px 14px;
-        }
-
-        .command-output pre {
-            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
-            font-size: 13px;
-            color: #d4d4d4;
-            white-space: pre-wrap;
-            word-break: break-all;
-            line-height: 1.5;
-        }
-
-        .command-output .cmd { color: #569cd6; }
-        .command-output .flag { color: #9cdcfe; }
-        .command-output .value { color: #ce9178; }
-
-        .command-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-        }
-
-        .btn-secondary {
-            background: white;
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: var(--bg-light);
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #045a34;
-        }
-
-        /* Config editor */
-        .config-editor {
-            width: 100%;
-            min-height: 500px;
-            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.5;
-            background: #1e1e1e;
-            color: #d4d4d4;
-            border: none;
-            border-radius: 8px;
-            padding: 16px;
-            resize: vertical;
-        }
-
-        .config-status {
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            margin-top: 10px;
-            display: none;
-        }
-
-        .config-status.success {
-            display: block;
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .config-status.error {
-            display: block;
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        /* Help page */
-        .help-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 20px;
-        }
-
-        .help-card {
-            background: var(--bg-card);
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            padding: 16px;
-        }
-
-        .help-card h3 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--primary);
-        }
-
-        .help-card table {
-            width: 100%;
-            font-size: 12px;
-            border-collapse: collapse;
-        }
-
-        .help-card th,
-        .help-card td {
-            text-align: left;
-            padding: 6px 8px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .help-card th {
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .help-card code {
-            background: #e8e8e8;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 11px;
-        }
-
-        .help-card ul {
-            margin: 0;
-            padding-left: 20px;
-        }
-
-        .help-card li {
-            font-size: 12px;
-            margin-bottom: 6px;
-            line-height: 1.4;
-        }
-
-        .copy-feedback {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--success);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 500;
-            font-size: 14px;
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 1000;
-        }
-
-        .copy-feedback.show {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
-        }
-    </style>
+<head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Job Scraper - Command Builder</title> <style> * {
+ margin: 0;
+ padding: 0;
+ box-sizing: border-box;
+ }
+
+ :root {
+ --primary: #0a66c2;
+ --primary-dark: #004182;
+ --secondary: #057642;
+ --bg-light: #f3f6f8;
+ --bg-card: #ffffff;
+ --text-primary: #191919;
+ --text-secondary: #666666;
+ --text-disabled: #aaaaaa;
+ --border: #dce6f1;
+ --success: #057642;
+ --warning: #b24020;
+ }
+
+ body {
+ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+ background: var(--bg-light);
+ color: var(--text-primary);
+ min-height: 100vh;
+ }
+
+ header {
+ background: var(--bg-card);
+ border-bottom: 1px solid var(--border);
+ padding: 12px 24px;
+ display: flex;
+ align-items: center;
+ gap: 16px;
+ position: sticky;
+ top: 0;
+ z-index: 100;
+ }
+
+ .logo {
+ width: 36px;
+ height: 36px;
+ background: var(--primary);
+ border-radius: 8px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ color: white;
+ font-weight: bold;
+ font-size: 16px;
+ }
+
+ header h1 {
+ font-size: 18px;
+ font-weight: 600;
+ }
+
+ .defaults-badge {
+ background: #e8f4fd;
+ color: var(--primary);
+ padding: 4px 12px;
+ border-radius: 4px;
+ font-size: 11px;
+ font-weight: 500;
+ }
+
+ nav {
+ display: flex;
+ gap: 8px;
+ margin-left: auto;
+ }
+
+ nav a {
+ padding: 6px 14px;
+ border-radius: 4px;
+ font-size: 13px;
+ font-weight: 500;
+ color: var(--text-secondary);
+ text-decoration: none;
+ transition: all 0.2s;
+ }
+
+ nav a:hover {
+ background: var(--bg-light);
+ color: var(--primary);
+ }
+
+ nav a.active {
+ background: var(--primary);
+ color: white;
+ }
+
+ main {
+ max-width: 1400px;
+ margin: 0 auto;
+ padding: 20px 24px;
+ }
+
+ .page {
+ display: none;
+ }
+
+ .page.active {
+ display: block;
+ }
+
+ /* Quick Actions */
+ .quick-actions {
+ display: flex;
+ gap: 10px;
+ margin-bottom: 24px;
+ flex-wrap: wrap;
+ }
+
+ .quick-action-btn {
+ padding: 12px 18px;
+ border-radius: 8px;
+ font-size: 13px;
+ font-weight: 500;
+ cursor: pointer;
+ transition: all 0.2s;
+ border: 1px solid var(--border);
+ background: var(--bg-card);
+ text-align: left;
+ }
+
+ .quick-action-btn:hover {
+ border-color: var(--primary);
+ background: rgba(10, 102, 194, 0.05);
+ }
+
+ .quick-action-btn.primary {
+ background: var(--primary);
+ color: white;
+ border-color: var(--primary);
+ }
+
+ .quick-action-btn.primary:hover {
+ background: var(--primary-dark);
+ }
+
+ .quick-action-btn .title {
+ font-weight: 600;
+ margin-bottom: 4px;
+ }
+
+ .quick-action-btn .cmd {
+ font-family: monospace;
+ font-size: 11px;
+ opacity: 0.8;
+ }
+
+ /* Section styling */
+ .section {
+ background: var(--bg-card);
+ border-radius: 12px;
+ border: 1px solid var(--border);
+ margin-bottom: 20px;
+ overflow: hidden;
+ }
+
+ .section-header {
+ background: var(--bg-light);
+ padding: 12px 16px;
+ border-bottom: 1px solid var(--border);
+ display: flex;
+ align-items: center;
+ gap: 12px;
+ }
+
+ .section-header h2 {
+ font-size: 14px;
+ font-weight: 600;
+ color: var(--text-primary);
+ }
+
+ .section-header .badge {
+ background: var(--primary);
+ color: white;
+ padding: 2px 8px;
+ border-radius: 4px;
+ font-size: 10px;
+ font-weight: 500;
+ }
+
+ .section-body {
+ padding: 16px;
+ }
+
+ /* Two column layout */
+ .two-columns {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ gap: 20px;
+ }
+
+ @media (max-width: 900px) {
+ .two-columns {
+ grid-template-columns: 1fr;
+ }
+ }
+
+ /* Option cards */
+ .option-card {
+ background: var(--bg-light);
+ border-radius: 8px;
+ padding: 14px;
+ margin-bottom: 12px;
+ }
+
+ .option-card:last-child {
+ margin-bottom: 0;
+ }
+
+ .option-card h3 {
+ font-size: 11px;
+ font-weight: 600;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+ color: var(--text-secondary);
+ margin-bottom: 10px;
+ }
+
+ .option-row {
+ margin-bottom: 10px;
+ }
+
+ .option-row:last-child {
+ margin-bottom: 0;
+ }
+
+ .option-row label {
+ display: block;
+ font-size: 13px;
+ font-weight: 500;
+ margin-bottom: 4px;
+ }
+
+ .option-row .flag {
+ font-size: 10px;
+ color: var(--primary);
+ font-family: monospace;
+ }
+
+ .option-row .default-value {
+ font-size: 10px;
+ color: var(--text-secondary);
+ margin-left: 4px;
+ }
+
+ input[type="text"],
+ input[type="number"],
+ select,
+ textarea {
+ width: 100%;
+ padding: 8px 10px;
+ border: 1px solid var(--border);
+ border-radius: 6px;
+ font-size: 13px;
+ transition: border-color 0.2s, box-shadow 0.2s;
+ font-family: inherit;
+ }
+
+ input:focus,
+ select:focus,
+ textarea:focus {
+ outline: none;
+ border-color: var(--primary);
+ box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.1);
+ }
+
+ input::placeholder {
+ color: #999;
+ }
+
+ .option-row.disabled label,
+ .option-row.disabled .flag {
+ color: var(--text-disabled);
+ }
+
+ .option-row.disabled input,
+ .option-row.disabled select {
+ background: #f5f5f5;
+ color: var(--text-disabled);
+ cursor: not-allowed;
+ }
+
+ .checkbox-row {
+ display: flex;
+ align-items: center;
+ gap: 8px;
+ padding: 5px 0;
+ }
+
+ .checkbox-row input[type="checkbox"] {
+ width: 16px;
+ height: 16px;
+ cursor: pointer;
+ accent-color: var(--primary);
+ }
+
+ .checkbox-row label {
+ margin-bottom: 0;
+ cursor: pointer;
+ font-size: 13px;
+ }
+
+ .geoid-presets {
+ display: flex;
+ gap: 4px;
+ margin-top: 6px;
+ flex-wrap: wrap;
+ }
+
+ .preset-btn {
+ padding: 4px 10px;
+ font-size: 11px;
+ border: 1px solid var(--border);
+ border-radius: 4px;
+ background: white;
+ cursor: pointer;
+ transition: all 0.2s;
+ }
+
+ .preset-btn:hover {
+ border-color: var(--primary);
+ background: rgba(10, 102, 194, 0.05);
+ }
+
+ .preset-btn.active {
+ background: var(--primary);
+ color: white;
+ border-color: var(--primary);
+ }
+
+ /* Command output */
+ .command-row {
+ margin-bottom: 12px;
+ }
+
+ .command-row:last-child {
+ margin-bottom: 0;
+ }
+
+ .command-label {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ margin-bottom: 6px;
+ }
+
+ .command-title {
+ font-size: 12px;
+ font-weight: 600;
+ color: var(--text-secondary);
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+ }
+
+ .btn-sm {
+ padding: 4px 10px;
+ font-size: 11px;
+ border-radius: 4px;
+ background: var(--bg-light);
+ color: var(--text-primary);
+ border: 1px solid var(--border);
+ cursor: pointer;
+ }
+
+ .btn-sm:hover {
+ background: var(--border);
+ }
+
+ .btn-sm.btn-primary {
+ background: var(--primary);
+ color: white;
+ border-color: var(--primary);
+ }
+
+ .btn-sm.btn-primary:hover {
+ background: var(--primary-dark);
+ }
+
+ .command-output {
+ background: #1e1e1e;
+ border-radius: 8px;
+ padding: 12px 14px;
+ }
+
+ .command-output pre {
+ font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+ font-size: 13px;
+ color: #d4d4d4;
+ white-space: pre-wrap;
+ word-break: break-all;
+ line-height: 1.5;
+ }
+
+ .command-output .cmd { color: #569cd6; }
+ .command-output .flag { color: #9cdcfe; }
+ .command-output .value { color: #ce9178; }
+
+ .command-actions {
+ display: flex;
+ gap: 8px;
+ margin-top: 10px;
+ }
+
+ .btn {
+ padding: 8px 16px;
+ border-radius: 6px;
+ font-size: 13px;
+ font-weight: 500;
+ cursor: pointer;
+ transition: all 0.2s;
+ border: none;
+ display: inline-flex;
+ align-items: center;
+ gap: 6px;
+ }
+
+ .btn-primary {
+ background: var(--primary);
+ color: white;
+ }
+
+ .btn-primary:hover {
+ background: var(--primary-dark);
+ }
+
+ .btn-secondary {
+ background: white;
+ color: var(--text-primary);
+ border: 1px solid var(--border);
+ }
+
+ .btn-secondary:hover {
+ background: var(--bg-light);
+ }
+
+ .btn-success {
+ background: var(--success);
+ color: white;
+ }
+
+ .btn-success:hover {
+ background: #045a34;
+ }
+
+ /* Config editor */
+ .config-editor {
+ width: 100%;
+ min-height: 500px;
+ font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+ font-size: 12px;
+ line-height: 1.5;
+ background: #1e1e1e;
+ color: #d4d4d4;
+ border: none;
+ border-radius: 8px;
+ padding: 16px;
+ resize: vertical;
+ }
+
+ .config-status {
+ padding: 8px 12px;
+ border-radius: 6px;
+ font-size: 12px;
+ margin-top: 10px;
+ display: none;
+ }
+
+ .config-status.success {
+ display: block;
+ background: #d4edda;
+ color: #155724;
+ }
+
+ .config-status.error {
+ display: block;
+ background: #f8d7da;
+ color: #721c24;
+ }
+
+ /* Help page */
+ .help-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+ gap: 20px;
+ }
+
+ .help-card {
+ background: var(--bg-card);
+ border-radius: 10px;
+ border: 1px solid var(--border);
+ padding: 16px;
+ }
+
+ .help-card h3 {
+ font-size: 14px;
+ font-weight: 600;
+ margin-bottom: 12px;
+ color: var(--primary);
+ }
+
+ .help-card table {
+ width: 100%;
+ font-size: 12px;
+ border-collapse: collapse;
+ }
+
+ .help-card th,
+ .help-card td {
+ text-align: left;
+ padding: 6px 8px;
+ border-bottom: 1px solid var(--border);
+ }
+
+ .help-card th {
+ color: var(--text-secondary);
+ font-weight: 500;
+ }
+
+ .help-card code {
+ background: #e8e8e8;
+ padding: 2px 6px;
+ border-radius: 4px;
+ font-family: monospace;
+ font-size: 11px;
+ }
+
+ .help-card ul {
+ margin: 0;
+ padding-left: 20px;
+ }
+
+ .help-card li {
+ font-size: 12px;
+ margin-bottom: 6px;
+ line-height: 1.4;
+ }
+
+ .copy-feedback {
+ position: fixed;
+ bottom: 20px;
+ left: 50%;
+ transform: translateX(-50%) translateY(100px);
+ background: var(--success);
+ color: white;
+ padding: 12px 24px;
+ border-radius: 8px;
+ font-weight: 500;
+ font-size: 14px;
+ opacity: 0;
+ transition: all 0.3s;
+ z-index: 1000;
+ }
+
+ .copy-feedback.show {
+ transform: translateX(-50%) translateY(0);
+ opacity: 1;
+ }
+ </style>
 </head>
 <body>
 <nav style="display:flex;gap:4px;align-items:center;padding:10px 20px;background:#161c26;border-bottom:1px solid #26303e;border-top:3px solid #e6953f;font-family:Segoe UI,system-ui,sans-serif">
-<a href="/" style="font-weight:700;color:#e8ecf3;text-decoration:none;margin-right:14px">✈️ Job Command Center</a>
+<a href="/" style="font-weight:700;color:#e8ecf3;text-decoration:none;margin-right:14px">Job Command Center</a>
 <a href="/" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Home</a>
 <a href="/library" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Library</a>
 <a href="/run" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Run Center</a>
 <a href="/dashboard?file=/api/analysis.json" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Dashboard</a>
 <a href="/builder" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Command Builder</a>
-</nav>
-    <header>
-        <div class="logo">JS</div>
-        <h1>Job Scraper</h1>
-        <span class="defaults-badge">Defaults: London, 48h, Claude Opus</span>
-        <nav>
-            <a href="#" class="active" data-page="commands">Commands</a>
-            <a href="#" data-page="config">Config</a>
-            <a href="#" data-page="help">Help</a>
-        </nav>
-    </header>
-
-    <main>
-        <!-- Commands Page -->
-        <div class="page active" id="commands-page">
-            <!-- Quick Actions -->
-            <div class="quick-actions">
-                <button class="quick-action-btn primary" onclick="copyQuickCommand('python run.py && python analyze.py')">
-                    <div class="title">Full Pipeline</div>
-                    <div class="cmd">python run.py && python analyze.py</div>
-                </button>
-                <button class="quick-action-btn" onclick="copyQuickCommand('python run.py --linkedin-only && python analyze.py')">
-                    <div class="title">Quick LinkedIn</div>
-                    <div class="cmd">python run.py --linkedin-only && python analyze.py</div>
-                </button>
-                <button class="quick-action-btn" onclick="copyQuickCommand('python run.py')">
-                    <div class="title">Scrape Only</div>
-                    <div class="cmd">python run.py</div>
-                </button>
-                <button class="quick-action-btn" onclick="copyQuickCommand('python analyze.py')">
-                    <div class="title">Analyze Only</div>
-                    <div class="cmd">python analyze.py</div>
-                </button>
-            </div>
-
-            <div class="two-columns">
-                <!-- SCRAPING SECTION -->
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Scraping</h2>
-                        <span class="badge">run.py</span>
-                    </div>
-                    <div class="section-body">
-                        <div class="option-card">
-                            <h3>Scrapers</h3>
-                            <div class="checkbox-row">
-                                <input type="checkbox" id="all-scrapers" checked>
-                                <label for="all-scrapers">All Scrapers <span class="default-value">(default)</span></label>
-                            </div>
-                            <div class="checkbox-row">
-                                <input type="checkbox" id="linkedin-only">
-                                <label for="linkedin-only">LinkedIn Only <span class="flag">--linkedin-only</span></label>
-                            </div>
-                            <div class="checkbox-row">
-                                <input type="checkbox" id="workday-only">
-                                <label for="workday-only">Workday Only <span class="flag">--workday-only</span></label>
-                            </div>
-                            <div class="checkbox-row">
-                                <input type="checkbox" id="playwright-only">
-                                <label for="playwright-only">Playwright Only <span class="flag">--playwright-only</span></label>
-                            </div>
-                        </div>
-
-                        <div class="option-card">
-                            <h3>Location</h3>
-                            <div class="option-row">
-                                <label>Geo ID <span class="flag">-g</span> <span class="default-value">default: 90009496</span></label>
-                                <input type="text" id="geo-id" placeholder="90009496 (Greater London)">
-                                <div class="geoid-presets">
-                                    <button class="preset-btn active" data-geoid="90009496">Greater London</button>
-                                    <button class="preset-btn" data-geoid="102257491">London City</button>
-                                    <button class="preset-btn" data-geoid="101165590">UK</button>
-                                    <button class="preset-btn" data-geoid="">Remote</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="option-card">
-                            <h3>Options</h3>
-                            <div class="option-row">
-                                <label>Time Range <span class="flag">-t</span> <span class="default-value">default: 48h</span></label>
-                                <select id="time-range">
-                                    <option value="">Default (48h)</option>
-                                    <option value="24h">Last 24 hours</option>
-                                    <option value="48h">Last 48 hours</option>
-                                    <option value="7d">Last 7 days</option>
-                                    <option value="30d">Last 30 days</option>
-                                </select>
-                            </div>
-                            <div class="option-row">
-                                <label>Workers <span class="flag">-w</span></label>
-                                <input type="number" id="scrape-workers" placeholder="Auto (CPU - 2)" min="1" max="10">
-                            </div>
-                            <div class="checkbox-row">
-                                <input type="checkbox" id="export-only">
-                                <label for="export-only">Export Only <span class="flag">--export-only</span></label>
-                            </div>
-                        </div>
-
-                        <div class="command-actions">
-                            <button class="btn btn-secondary" onclick="resetScrapeForm()">Reset</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ANALYSIS SECTION -->
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Analysis</h2>
-                        <span class="badge">analyze.py</span>
-                    </div>
-                    <div class="section-body">
-                        <div class="option-card">
-                            <h3>Input</h3>
-                            <div class="option-row">
-                                <label>Input File <span class="flag">-i</span> <span class="default-value">default: latest</span></label>
-                                <input type="text" id="input-file" placeholder="Latest JSON in output/">
-                            </div>
-                            <div class="option-row">
-                                <label>CV File <span class="flag">--cv</span> <span class="default-value">default: data/cv.txt</span></label>
-                                <input type="text" id="cv-file" placeholder="data/cv.txt">
-                            </div>
-                        </div>
-
-                        <div class="option-card">
-                            <h3>AI Backend</h3>
-                            <div class="option-row">
-                                <label>Backend <span class="flag">-b</span> <span class="default-value">default: claude</span></label>
-                                <select id="backend">
-                                    <option value="claude">Claude (cloud)</option>
-                                    <option value="ollama">Ollama (local)</option>
-                                </select>
-                            </div>
-                            <div class="option-row" id="claude-model-row">
-                                <label>Model <span class="flag">-m</span> <span class="default-value">default: opus</span></label>
-                                <select id="claude-model">
-                                    <option value="opus">Opus (best quality)</option>
-                                    <option value="sonnet">Sonnet (balanced)</option>
-                                    <option value="haiku">Haiku (fast)</option>
-                                </select>
-                            </div>
-                            <div class="option-row disabled" id="ollama-model-row">
-                                <label>Ollama Model <span class="flag">-m</span></label>
-                                <input type="text" id="ollama-model" placeholder="qwen2.5:7b" value="qwen2.5:7b" disabled>
-                            </div>
-                        </div>
-
-                        <div class="option-card">
-                            <h3>Options</h3>
-                            <div class="option-row">
-                                <label>Min Score <span class="flag">--min-score</span> <span class="default-value">default: 7</span></label>
-                                <input type="number" id="min-score" placeholder="7" min="1" max="10">
-                            </div>
-                            <div class="option-row">
-                                <label>Workers <span class="flag">-w</span></label>
-                                <input type="number" id="analyze-workers" placeholder="Auto (CPU - 2)" min="1" max="20">
-                            </div>
-                            <div class="option-row">
-                                <label>Limit <span class="flag">-n</span></label>
-                                <input type="number" id="limit" placeholder="No limit" min="1">
-                            </div>
-                            <div class="checkbox-row">
-                                <input type="checkbox" id="sequential">
-                                <label for="sequential">Sequential Mode <span class="flag">-s</span></label>
-                            </div>
-                        </div>
-
-                        <div class="command-actions">
-                            <button class="btn btn-secondary" onclick="resetAnalyzeForm()">Reset</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- COMBINED COMMAND OUTPUT -->
-            <div class="section" style="margin-top: 20px;">
-                <div class="section-header">
-                    <h2>Generated Commands</h2>
-                </div>
-                <div class="section-body">
-                    <div class="command-row">
-                        <div class="command-label">
-                            <span class="command-title">Scrape</span>
-                            <button class="btn btn-sm" onclick="copyScrapeCommand()">Copy</button>
-                        </div>
-                        <div class="command-output">
-                            <pre id="scrape-command-preview"><span class="cmd">python</span> run.py</pre>
-                        </div>
-                    </div>
-                    <div class="command-row">
-                        <div class="command-label">
-                            <span class="command-title">Analyze</span>
-                            <button class="btn btn-sm" onclick="copyAnalyzeCommand()">Copy</button>
-                        </div>
-                        <div class="command-output">
-                            <pre id="analyze-command-preview"><span class="cmd">python</span> analyze.py</pre>
-                        </div>
-                    </div>
-                    <div class="command-row">
-                        <div class="command-label">
-                            <span class="command-title">Full Pipeline</span>
-                            <button class="btn btn-sm btn-primary" onclick="copyFullPipeline()">Copy</button>
-                        </div>
-                        <div class="command-output">
-                            <pre id="full-command-preview"><span class="cmd">python</span> run.py <span class="flag">&&</span> <span class="cmd">python</span> analyze.py</pre>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Config Page -->
-        <div class="page" id="config-page">
-            <div class="section">
-                <div class="section-header">
-                    <h2>Configuration</h2>
-                    <span class="badge">config.json</span>
-                </div>
-                <div class="section-body">
-                    <p style="margin-bottom: 12px; font-size: 13px; color: var(--text-secondary);">
-                        Edit your config.json file. Changes here need to be saved to the file manually.
-                    </p>
-                    <textarea class="config-editor" id="config-editor" spellcheck="false"></textarea>
-                    <div id="config-status" class="config-status"></div>
-                    <div class="command-actions" style="margin-top: 12px;">
-                        <button class="btn btn-primary" onclick="copyConfig()">Copy to Clipboard</button>
-                        <button class="btn btn-secondary" onclick="formatConfig()">Format JSON</button>
-                        <button class="btn btn-secondary" onclick="validateConfig()">Validate</button>
-                        <button class="btn btn-secondary" onclick="downloadConfig()">Download</button>
-                        <label class="btn btn-secondary" style="cursor: pointer;">
-                            Load File
-                            <input type="file" id="config-file-input" accept=".json" style="display: none;">
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="two-columns" style="margin-top: 20px;">
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Quick Add Job Title</h2>
-                    </div>
-                    <div class="section-body">
-                        <div class="option-row">
-                            <input type="text" id="new-job-title" placeholder="e.g., VP Engineering">
-                        </div>
-                        <button class="btn btn-success" onclick="addJobTitle()" style="margin-top: 8px;">Add to Config</button>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Quick Add Exclusion</h2>
-                    </div>
-                    <div class="section-body">
-                        <div class="option-row">
-                            <input type="text" id="new-exclusion" placeholder="e.g., Intern">
-                        </div>
-                        <button class="btn btn-secondary" onclick="addExclusion()" style="margin-top: 8px;">Add to Exclusions</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Help Page -->
-        <div class="page" id="help-page">
-            <div class="help-grid">
-                <div class="help-card">
-                    <h3>Quick Start</h3>
-                    <table>
-                        <tr><td>Full pipeline</td><td><code>python run.py && python analyze.py</code></td></tr>
-                        <tr><td>Scrape only</td><td><code>python run.py</code></td></tr>
-                        <tr><td>Analyze only</td><td><code>python analyze.py</code></td></tr>
-                        <tr><td>LinkedIn only</td><td><code>python run.py --linkedin-only</code></td></tr>
-                    </table>
-                </div>
-
-                <div class="help-card">
-                    <h3>Sensible Defaults</h3>
-                    <table>
-                        <tr><th>Setting</th><th>Default</th></tr>
-                        <tr><td>Location</td><td>London (90009496)</td></tr>
-                        <tr><td>Time Range</td><td>48 hours</td></tr>
-                        <tr><td>AI Backend</td><td>Claude</td></tr>
-                        <tr><td>AI Model</td><td>Opus</td></tr>
-                        <tr><td>Min Score</td><td>7</td></tr>
-                        <tr><td>Workers</td><td>CPU count - 2</td></tr>
-                    </table>
-                </div>
-
-                <div class="help-card">
-                    <h3>LinkedIn GeoIDs</h3>
-                    <table>
-                        <tr><td>Greater London</td><td><code>90009496</code></td></tr>
-                        <tr><td>London (city)</td><td><code>102257491</code></td></tr>
-                        <tr><td>United Kingdom</td><td><code>101165590</code></td></tr>
-                        <tr><td>Manchester</td><td><code>90009706</code></td></tr>
-                        <tr><td>Birmingham</td><td><code>90009569</code></td></tr>
-                        <tr><td>Edinburgh</td><td><code>90009563</code></td></tr>
-                    </table>
-                </div>
-
-                <div class="help-card">
-                    <h3>AI Models</h3>
-                    <table>
-                        <tr><th>Model</th><th>Description</th></tr>
-                        <tr><td>Opus</td><td>Best quality, recommended for job matching</td></tr>
-                        <tr><td>Sonnet</td><td>Good balance of speed and quality</td></tr>
-                        <tr><td>Haiku</td><td>Fastest, good for testing</td></tr>
-                        <tr><td>Ollama</td><td>Local, free (e.g., qwen2.5:7b)</td></tr>
-                    </table>
-                </div>
-
-                <div class="help-card">
-                    <h3>Scraping Options</h3>
-                    <ul>
-                        <li><code>--linkedin-only</code> - Only run LinkedIn scraper (fastest)</li>
-                        <li><code>--workday-only</code> - Only run Workday scrapers (39+ companies)</li>
-                        <li><code>--playwright-only</code> - Only run Playwright (Google, Apple, etc.)</li>
-                        <li><code>--skip-linkedin</code> - Run all except LinkedIn</li>
-                        <li><code>--export-only</code> - Generate exports from existing data</li>
-                        <li><code>-t 24h</code> - Jobs from last 24 hours</li>
-                        <li><code>-g 101165590</code> - UK-wide search</li>
-                    </ul>
-                </div>
-
-                <div class="help-card">
-                    <h3>Analysis Options</h3>
-                    <ul>
-                        <li><code>-i file.json</code> - Specify input file (default: latest)</li>
-                        <li><code>--cv path</code> - Path to CV file (default: data/cv.txt)</li>
-                        <li><code>-b ollama</code> - Use Ollama backend</li>
-                        <li><code>-m haiku</code> - Use Haiku model (faster)</li>
-                        <li><code>--min-score 8</code> - Higher threshold for matches</li>
-                        <li><code>-n 50</code> - Limit to 50 jobs (for testing)</li>
-                        <li><code>-s</code> - Sequential mode (no parallel)</li>
-                    </ul>
-                </div>
-
-                <div class="help-card">
-                    <h3>Output Files</h3>
-                    <ul>
-                        <li><code>output/linkedin_jobs_*.json</code> - LinkedIn scraper results</li>
-                        <li><code>output/master_jobs_*.json</code> - Combined all scrapers</li>
-                        <li><code>output/all_jobs_*.xlsx</code> - Excel export</li>
-                        <li><code>output/analysis_*.json</code> - AI analysis results</li>
-                        <li><code>output/analysis_*.xlsx</code> - Analysis Excel report</li>
-                        <li><code>output/analysis_*_shortlist.json</code> - Matched jobs only</li>
-                    </ul>
-                </div>
-
-                <div class="help-card">
-                    <h3>Config Structure</h3>
-                    <ul>
-                        <li><code>cv_file</code> - Path to your CV</li>
-                        <li><code>scraping.location</code> - Default location</li>
-                        <li><code>scraping.geo_id</code> - LinkedIn geoId</li>
-                        <li><code>scraping.time_range</code> - Default time filter</li>
-                        <li><code>scraping.job_titles</code> - Job titles to search</li>
-                        <li><code>analysis.backend</code> - claude or ollama</li>
-                        <li><code>analysis.model</code> - AI model to use</li>
-                        <li><code>filters.exclude_in_title</code> - Title blacklist</li>
-                        <li><code>filters.positive_keywords</code> - Score boosters</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <div class="copy-feedback" id="copy-feedback">Copied to clipboard!</div>
-
-    <script>
-        // Default config template
-        const defaultConfig = {
-            "cv_file": "data/cv.txt",
-            "scraping": {
-                "location": "London",
-                "geo_id": "90009496",
-                "time_range": "48h",
-                "job_titles": [
-                    "Head of Engineering",
-                    "Director of Engineering",
-                    "Senior Engineering Manager",
-                    "Engineering Manager",
-                    "VP Engineering"
-                ],
-                "max_jobs_per_title": 0,
-                "easy_apply": false
-            },
-            "analysis": {
-                "backend": "claude",
-                "model": "opus",
-                "min_score": 7,
-                "parallel": true
-            },
-            "filters": {
-                "exclude_in_title": ["junior", "intern", "graduate", "apprentice"],
-                "exclude_in_description": [],
-                "positive_keywords": {"team": 4, "agile": 5, "leadership": 4},
-                "negative_keywords": {"hands-on coding": -1, "hardware": -5}
-            }
-        };
-
-        // Page navigation
-        document.querySelectorAll('nav a').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
-                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                link.classList.add('active');
-                document.getElementById(link.dataset.page + '-page').classList.add('active');
-            });
-        });
-
-        // Initialize config editor
-        document.getElementById('config-editor').value = JSON.stringify(defaultConfig, null, 2);
-
-        // Scrape form elements
-        const scrapeInputs = {
-            allScrapers: document.getElementById('all-scrapers'),
-            linkedinOnly: document.getElementById('linkedin-only'),
-            workdayOnly: document.getElementById('workday-only'),
-            playwrightOnly: document.getElementById('playwright-only'),
-            geoId: document.getElementById('geo-id'),
-            timeRange: document.getElementById('time-range'),
-            workers: document.getElementById('scrape-workers'),
-            exportOnly: document.getElementById('export-only')
-        };
-
-        // Analyze form elements
-        const analyzeInputs = {
-            inputFile: document.getElementById('input-file'),
-            cvFile: document.getElementById('cv-file'),
-            backend: document.getElementById('backend'),
-            claudeModel: document.getElementById('claude-model'),
-            ollamaModel: document.getElementById('ollama-model'),
-            minScore: document.getElementById('min-score'),
-            workers: document.getElementById('analyze-workers'),
-            limit: document.getElementById('limit'),
-            sequential: document.getElementById('sequential')
-        };
-
-        const presetButtons = document.querySelectorAll('.preset-btn');
-
-        // Build scrape command
-        function buildScrapeCommand() {
-            let parts = ['<span class="cmd">python</span> run.py'];
-
-            if (scrapeInputs.linkedinOnly.checked) {
-                parts.push('<span class="flag">--linkedin-only</span>');
-            } else if (scrapeInputs.workdayOnly.checked) {
-                parts.push('<span class="flag">--workday-only</span>');
-            } else if (scrapeInputs.playwrightOnly.checked) {
-                parts.push('<span class="flag">--playwright-only</span>');
-            }
-
-            if (scrapeInputs.geoId.value.trim() && scrapeInputs.geoId.value.trim() !== '90009496') {
-                parts.push(`<span class="flag">-g</span> <span class="value">${escapeHtml(scrapeInputs.geoId.value.trim())}</span>`);
-            }
-
-            if (scrapeInputs.timeRange.value && scrapeInputs.timeRange.value !== '48h') {
-                parts.push(`<span class="flag">-t</span> <span class="value">${scrapeInputs.timeRange.value}</span>`);
-            }
-
-            if (scrapeInputs.workers.value) {
-                parts.push(`<span class="flag">-w</span> <span class="value">${scrapeInputs.workers.value}</span>`);
-            }
-
-            if (scrapeInputs.exportOnly.checked) {
-                parts.push('<span class="flag">--export-only</span>');
-            }
-
-            document.getElementById('scrape-command-preview').innerHTML = parts.join(' ');
-            updateFullPipeline();
-        }
-
-        function getPlainScrapeCommand() {
-            let parts = ['python run.py'];
-
-            if (scrapeInputs.linkedinOnly.checked) parts.push('--linkedin-only');
-            else if (scrapeInputs.workdayOnly.checked) parts.push('--workday-only');
-            else if (scrapeInputs.playwrightOnly.checked) parts.push('--playwright-only');
-
-            if (scrapeInputs.geoId.value.trim() && scrapeInputs.geoId.value.trim() !== '90009496') {
-                parts.push(`-g ${scrapeInputs.geoId.value.trim()}`);
-            }
-
-            if (scrapeInputs.timeRange.value && scrapeInputs.timeRange.value !== '48h') {
-                parts.push(`-t ${scrapeInputs.timeRange.value}`);
-            }
-
-            if (scrapeInputs.workers.value) parts.push(`-w ${scrapeInputs.workers.value}`);
-            if (scrapeInputs.exportOnly.checked) parts.push('--export-only');
-
-            return parts.join(' ');
-        }
-
-        // Build analyze command
-        function buildAnalyzeCommand() {
-            let parts = ['<span class="cmd">python</span> analyze.py'];
-
-            if (analyzeInputs.inputFile.value.trim()) {
-                parts.push(`<span class="flag">-i</span> <span class="value">"${escapeHtml(analyzeInputs.inputFile.value.trim())}"</span>`);
-            }
-
-            if (analyzeInputs.cvFile.value.trim() && analyzeInputs.cvFile.value.trim() !== 'data/cv.txt') {
-                parts.push(`<span class="flag">--cv</span> <span class="value">"${escapeHtml(analyzeInputs.cvFile.value.trim())}"</span>`);
-            }
-
-            if (analyzeInputs.backend.value !== 'claude') {
-                parts.push(`<span class="flag">-b</span> <span class="value">${analyzeInputs.backend.value}</span>`);
-            }
-
-            if (analyzeInputs.backend.value === 'claude' && analyzeInputs.claudeModel.value !== 'opus') {
-                parts.push(`<span class="flag">-m</span> <span class="value">${analyzeInputs.claudeModel.value}</span>`);
-            } else if (analyzeInputs.backend.value === 'ollama' && analyzeInputs.ollamaModel.value.trim()) {
-                parts.push(`<span class="flag">-m</span> <span class="value">${escapeHtml(analyzeInputs.ollamaModel.value.trim())}</span>`);
-            }
-
-            if (analyzeInputs.minScore.value && parseInt(analyzeInputs.minScore.value) !== 7) {
-                parts.push(`<span class="flag">--min-score</span> <span class="value">${analyzeInputs.minScore.value}</span>`);
-            }
-
-            if (analyzeInputs.workers.value) {
-                parts.push(`<span class="flag">-w</span> <span class="value">${analyzeInputs.workers.value}</span>`);
-            }
-
-            if (analyzeInputs.limit.value) {
-                parts.push(`<span class="flag">-n</span> <span class="value">${analyzeInputs.limit.value}</span>`);
-            }
-
-            if (analyzeInputs.sequential.checked) {
-                parts.push('<span class="flag">-s</span>');
-            }
-
-            document.getElementById('analyze-command-preview').innerHTML = parts.join(' ');
-            updateFullPipeline();
-        }
-
-        function getPlainAnalyzeCommand() {
-            let parts = ['python analyze.py'];
-
-            if (analyzeInputs.inputFile.value.trim()) {
-                parts.push(`-i "${analyzeInputs.inputFile.value.trim()}"`);
-            }
-
-            if (analyzeInputs.cvFile.value.trim() && analyzeInputs.cvFile.value.trim() !== 'data/cv.txt') {
-                parts.push(`--cv "${analyzeInputs.cvFile.value.trim()}"`);
-            }
-
-            if (analyzeInputs.backend.value !== 'claude') {
-                parts.push(`-b ${analyzeInputs.backend.value}`);
-            }
-
-            if (analyzeInputs.backend.value === 'claude' && analyzeInputs.claudeModel.value !== 'opus') {
-                parts.push(`-m ${analyzeInputs.claudeModel.value}`);
-            } else if (analyzeInputs.backend.value === 'ollama' && analyzeInputs.ollamaModel.value.trim()) {
-                parts.push(`-m ${analyzeInputs.ollamaModel.value.trim()}`);
-            }
-
-            if (analyzeInputs.minScore.value && parseInt(analyzeInputs.minScore.value) !== 7) {
-                parts.push(`--min-score ${analyzeInputs.minScore.value}`);
-            }
-
-            if (analyzeInputs.workers.value) parts.push(`-w ${analyzeInputs.workers.value}`);
-            if (analyzeInputs.limit.value) parts.push(`-n ${analyzeInputs.limit.value}`);
-            if (analyzeInputs.sequential.checked) parts.push('-s');
-
-            return parts.join(' ');
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function showFeedback(message) {
-            const feedback = document.getElementById('copy-feedback');
-            feedback.textContent = message || 'Copied to clipboard!';
-            feedback.classList.add('show');
-            setTimeout(() => feedback.classList.remove('show'), 2000);
-        }
-
-        function copyQuickCommand(cmd) {
-            navigator.clipboard.writeText(cmd).then(() => showFeedback());
-        }
-
-        function copyScrapeCommand() {
-            navigator.clipboard.writeText(getPlainScrapeCommand()).then(() => showFeedback());
-        }
-
-        function copyAnalyzeCommand() {
-            navigator.clipboard.writeText(getPlainAnalyzeCommand()).then(() => showFeedback());
-        }
-
-        function copyFullPipeline() {
-            const full = getPlainScrapeCommand() + ' && ' + getPlainAnalyzeCommand();
-            navigator.clipboard.writeText(full).then(() => showFeedback());
-        }
-
-        function updateFullPipeline() {
-            const scrape = document.getElementById('scrape-command-preview').innerHTML;
-            const analyze = document.getElementById('analyze-command-preview').innerHTML;
-            document.getElementById('full-command-preview').innerHTML =
-                scrape + ' <span class="flag">&&</span> ' + analyze;
-        }
-
-        function resetScrapeForm() {
-            scrapeInputs.allScrapers.checked = true;
-            scrapeInputs.linkedinOnly.checked = false;
-            scrapeInputs.workdayOnly.checked = false;
-            scrapeInputs.playwrightOnly.checked = false;
-            scrapeInputs.geoId.value = '';
-            scrapeInputs.timeRange.value = '';
-            scrapeInputs.workers.value = '';
-            scrapeInputs.exportOnly.checked = false;
-            presetButtons.forEach(btn => btn.classList.remove('active'));
-            presetButtons[0].classList.add('active');
-            buildScrapeCommand();
-        }
-
-        function resetAnalyzeForm() {
-            analyzeInputs.inputFile.value = '';
-            analyzeInputs.cvFile.value = '';
-            analyzeInputs.backend.value = 'claude';
-            analyzeInputs.claudeModel.value = 'opus';
-            analyzeInputs.ollamaModel.value = 'qwen2.5:7b';
-            analyzeInputs.minScore.value = '';
-            analyzeInputs.workers.value = '';
-            analyzeInputs.limit.value = '';
-            analyzeInputs.sequential.checked = false;
-            updateAnalyzeBackendState();
-            buildAnalyzeCommand();
-        }
-
-        function updateAnalyzeBackendState() {
-            const isClaude = analyzeInputs.backend.value === 'claude';
-
-            document.getElementById('claude-model-row').classList.toggle('disabled', !isClaude);
-            analyzeInputs.claudeModel.disabled = !isClaude;
-
-            document.getElementById('ollama-model-row').classList.toggle('disabled', isClaude);
-            analyzeInputs.ollamaModel.disabled = isClaude;
-        }
-
-        // Config functions
-        function showStatus(message, type) {
-            const status = document.getElementById('config-status');
-            status.textContent = message;
-            status.className = 'config-status ' + type;
-            setTimeout(() => status.className = 'config-status', 3000);
-        }
-
-        function copyConfig() {
-            const editor = document.getElementById('config-editor');
-            try {
-                JSON.parse(editor.value);
-                navigator.clipboard.writeText(editor.value).then(() => showFeedback('Config copied!'));
-            } catch (e) {
-                showStatus('Fix JSON errors before copying', 'error');
-            }
-        }
-
-        function formatConfig() {
-            const editor = document.getElementById('config-editor');
-            try {
-                const parsed = JSON.parse(editor.value);
-                editor.value = JSON.stringify(parsed, null, 2);
-                showStatus('Formatted successfully', 'success');
-            } catch (e) {
-                showStatus('Invalid JSON: ' + e.message, 'error');
-            }
-        }
-
-        function validateConfig() {
-            const editor = document.getElementById('config-editor');
-            try {
-                JSON.parse(editor.value);
-                showStatus('Valid JSON!', 'success');
-            } catch (e) {
-                showStatus('Invalid JSON: ' + e.message, 'error');
-            }
-        }
-
-        function downloadConfig() {
-            const editor = document.getElementById('config-editor');
-            try {
-                JSON.parse(editor.value);
-                const blob = new Blob([editor.value], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'config.json';
-                a.click();
-                URL.revokeObjectURL(url);
-            } catch (e) {
-                showStatus('Fix JSON errors before downloading', 'error');
-            }
-        }
-
-        function addJobTitle() {
-            const input = document.getElementById('new-job-title');
-            const title = input.value.trim();
-            if (!title) return;
-
-            const editor = document.getElementById('config-editor');
-            try {
-                const config = JSON.parse(editor.value);
-                if (!config.scraping) config.scraping = {};
-                if (!config.scraping.job_titles) config.scraping.job_titles = [];
-                if (!config.scraping.job_titles.includes(title)) {
-                    config.scraping.job_titles.push(title);
-                    editor.value = JSON.stringify(config, null, 2);
-                    input.value = '';
-                    showStatus(`Added: ${title}`, 'success');
-                } else {
-                    showStatus('Title already exists', 'error');
-                }
-            } catch (e) {
-                showStatus('Fix JSON errors first', 'error');
-            }
-        }
-
-        function addExclusion() {
-            const input = document.getElementById('new-exclusion');
-            const keyword = input.value.trim();
-            if (!keyword) return;
-
-            const editor = document.getElementById('config-editor');
-            try {
-                const config = JSON.parse(editor.value);
-                if (!config.filters) config.filters = {};
-                if (!config.filters.exclude_in_title) config.filters.exclude_in_title = [];
-                if (!config.filters.exclude_in_title.includes(keyword)) {
-                    config.filters.exclude_in_title.push(keyword);
-                    editor.value = JSON.stringify(config, null, 2);
-                    input.value = '';
-                    showStatus(`Added exclusion: ${keyword}`, 'success');
-                } else {
-                    showStatus('Keyword already exists', 'error');
-                }
-            } catch (e) {
-                showStatus('Fix JSON errors first', 'error');
-            }
-        }
-
-        // File upload
-        document.getElementById('config-file-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const parsed = JSON.parse(event.target.result);
-                        document.getElementById('config-editor').value = JSON.stringify(parsed, null, 2);
-                        showStatus('Config loaded successfully', 'success');
-                    } catch (err) {
-                        showStatus('Invalid JSON file', 'error');
-                    }
-                };
-                reader.readAsText(file);
-            }
-        });
-
-        // Initialize
-        function init() {
-            // Scrape form listeners
-            ['geoId', 'workers'].forEach(key => {
-                scrapeInputs[key].addEventListener('input', buildScrapeCommand);
-            });
-
-            scrapeInputs.timeRange.addEventListener('change', buildScrapeCommand);
-
-            ['allScrapers', 'linkedinOnly', 'workdayOnly', 'playwrightOnly', 'exportOnly'].forEach(key => {
-                scrapeInputs[key].addEventListener('change', () => {
-                    if (key === 'linkedinOnly' && scrapeInputs.linkedinOnly.checked) {
-                        scrapeInputs.allScrapers.checked = false;
-                        scrapeInputs.workdayOnly.checked = false;
-                        scrapeInputs.playwrightOnly.checked = false;
-                    } else if (key === 'workdayOnly' && scrapeInputs.workdayOnly.checked) {
-                        scrapeInputs.allScrapers.checked = false;
-                        scrapeInputs.linkedinOnly.checked = false;
-                        scrapeInputs.playwrightOnly.checked = false;
-                    } else if (key === 'playwrightOnly' && scrapeInputs.playwrightOnly.checked) {
-                        scrapeInputs.allScrapers.checked = false;
-                        scrapeInputs.linkedinOnly.checked = false;
-                        scrapeInputs.workdayOnly.checked = false;
-                    } else if (key === 'allScrapers' && scrapeInputs.allScrapers.checked) {
-                        scrapeInputs.linkedinOnly.checked = false;
-                        scrapeInputs.workdayOnly.checked = false;
-                        scrapeInputs.playwrightOnly.checked = false;
-                    }
-                    buildScrapeCommand();
-                });
-            });
-
-            // Analyze form listeners
-            ['inputFile', 'cvFile', 'ollamaModel', 'minScore', 'workers', 'limit'].forEach(key => {
-                analyzeInputs[key].addEventListener('input', buildAnalyzeCommand);
-            });
-
-            analyzeInputs.backend.addEventListener('change', () => {
-                updateAnalyzeBackendState();
-                buildAnalyzeCommand();
-            });
-
-            analyzeInputs.claudeModel.addEventListener('change', buildAnalyzeCommand);
-            analyzeInputs.sequential.addEventListener('change', buildAnalyzeCommand);
-
-            // Preset buttons
-            presetButtons.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    scrapeInputs.geoId.value = btn.dataset.geoid;
-                    presetButtons.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    buildScrapeCommand();
-                });
-            });
-
-            updateAnalyzeBackendState();
-            buildAnalyzeCommand();
-            buildScrapeCommand();
-        }
-
-        document.addEventListener('DOMContentLoaded', init);
-    </script>
+</nav> <header> <div class="logo">JS</div> <h1>Job Scraper</h1> <span class="defaults-badge">Defaults: London, 48h, Claude Opus</span> <nav> <a href="#" class="active" data-page="commands">Commands</a> <a href="#" data-page="config">Config</a> <a href="#" data-page="help">Help</a> </nav> </header> <main> <!-- Commands Page --> <div class="page active" id="commands-page"> <!-- Quick Actions --> <div class="quick-actions"> <button class="quick-action-btn primary" onclick="copyQuickCommand('python run.py && python analyze.py')"> <div class="title">Full Pipeline</div> <div class="cmd">python run.py && python analyze.py</div> </button> <button class="quick-action-btn" onclick="copyQuickCommand('python run.py --linkedin-only && python analyze.py')"> <div class="title">Quick LinkedIn</div> <div class="cmd">python run.py --linkedin-only && python analyze.py</div> </button> <button class="quick-action-btn" onclick="copyQuickCommand('python run.py')"> <div class="title">Scrape Only</div> <div class="cmd">python run.py</div> </button> <button class="quick-action-btn" onclick="copyQuickCommand('python analyze.py')"> <div class="title">Analyze Only</div> <div class="cmd">python analyze.py</div> </button> </div> <div class="two-columns"> <!-- SCRAPING SECTION --> <div class="section"> <div class="section-header"> <h2>Scraping</h2> <span class="badge">run.py</span> </div> <div class="section-body"> <div class="option-card"> <h3>Scrapers</h3> <div class="checkbox-row"> <input type="checkbox" id="all-scrapers" checked> <label for="all-scrapers">All Scrapers <span class="default-value">(default)</span></label> </div> <div class="checkbox-row"> <input type="checkbox" id="linkedin-only"> <label for="linkedin-only">LinkedIn Only <span class="flag">--linkedin-only</span></label> </div> <div class="checkbox-row"> <input type="checkbox" id="workday-only"> <label for="workday-only">Workday Only <span class="flag">--workday-only</span></label> </div> <div class="checkbox-row"> <input type="checkbox" id="playwright-only"> <label for="playwright-only">Playwright Only <span class="flag">--playwright-only</span></label> </div> </div> <div class="option-card"> <h3>Location</h3> <div class="option-row"> <label>Geo ID <span class="flag">-g</span> <span class="default-value">default: 90009496</span></label> <input type="text" id="geo-id" placeholder="90009496 (Greater London)"> <div class="geoid-presets"> <button class="preset-btn active" data-geoid="90009496">Greater London</button> <button class="preset-btn" data-geoid="102257491">London City</button> <button class="preset-btn" data-geoid="101165590">UK</button> <button class="preset-btn" data-geoid="">Remote</button> </div> </div> </div> <div class="option-card"> <h3>Options</h3> <div class="option-row"> <label>Time Range <span class="flag">-t</span> <span class="default-value">default: 48h</span></label> <select id="time-range"> <option value="">Default (48h)</option> <option value="24h">Last 24 hours</option> <option value="48h">Last 48 hours</option> <option value="7d">Last 7 days</option> <option value="30d">Last 30 days</option> </select> </div> <div class="option-row"> <label>Workers <span class="flag">-w</span></label> <input type="number" id="scrape-workers" placeholder="Auto (CPU - 2)" min="1" max="10"> </div> <div class="checkbox-row"> <input type="checkbox" id="export-only"> <label for="export-only">Export Only <span class="flag">--export-only</span></label> </div> </div> <div class="command-actions"> <button class="btn btn-secondary" onclick="resetScrapeForm()">Reset</button> </div> </div> </div> <!-- ANALYSIS SECTION --> <div class="section"> <div class="section-header"> <h2>Analysis</h2> <span class="badge">analyze.py</span> </div> <div class="section-body"> <div class="option-card"> <h3>Input</h3> <div class="option-row"> <label>Input File <span class="flag">-i</span> <span class="default-value">default: latest</span></label> <input type="text" id="input-file" placeholder="Latest JSON in output/"> </div> <div class="option-row"> <label>CV File <span class="flag">--cv</span> <span class="default-value">default: data/cv.txt</span></label> <input type="text" id="cv-file" placeholder="data/cv.txt"> </div> </div> <div class="option-card"> <h3>AI Backend</h3> <div class="option-row"> <label>Backend <span class="flag">-b</span> <span class="default-value">default: claude</span></label> <select id="backend"> <option value="claude">Claude (cloud)</option> <option value="ollama">Ollama (local)</option> </select> </div> <div class="option-row" id="claude-model-row"> <label>Model <span class="flag">-m</span> <span class="default-value">default: opus</span></label> <select id="claude-model"> <option value="opus">Opus (best quality)</option> <option value="sonnet">Sonnet (balanced)</option> <option value="haiku">Haiku (fast)</option> </select> </div> <div class="option-row disabled" id="ollama-model-row"> <label>Ollama Model <span class="flag">-m</span></label> <input type="text" id="ollama-model" placeholder="qwen2.5:7b" value="qwen2.5:7b" disabled> </div> </div> <div class="option-card"> <h3>Options</h3> <div class="option-row"> <label>Min Score <span class="flag">--min-score</span> <span class="default-value">default: 7</span></label> <input type="number" id="min-score" placeholder="7" min="1" max="10"> </div> <div class="option-row"> <label>Workers <span class="flag">-w</span></label> <input type="number" id="analyze-workers" placeholder="Auto (CPU - 2)" min="1" max="20"> </div> <div class="option-row"> <label>Limit <span class="flag">-n</span></label> <input type="number" id="limit" placeholder="No limit" min="1"> </div> <div class="checkbox-row"> <input type="checkbox" id="sequential"> <label for="sequential">Sequential Mode <span class="flag">-s</span></label> </div> </div> <div class="command-actions"> <button class="btn btn-secondary" onclick="resetAnalyzeForm()">Reset</button> </div> </div> </div> </div> <!-- COMBINED COMMAND OUTPUT --> <div class="section" style="margin-top: 20px;"> <div class="section-header"> <h2>Generated Commands</h2> </div> <div class="section-body"> <div class="command-row"> <div class="command-label"> <span class="command-title">Scrape</span> <button class="btn btn-sm" onclick="copyScrapeCommand()">Copy</button> </div> <div class="command-output"> <pre id="scrape-command-preview"><span class="cmd">python</span> run.py</pre> </div> </div> <div class="command-row"> <div class="command-label"> <span class="command-title">Analyze</span> <button class="btn btn-sm" onclick="copyAnalyzeCommand()">Copy</button> </div> <div class="command-output"> <pre id="analyze-command-preview"><span class="cmd">python</span> analyze.py</pre> </div> </div> <div class="command-row"> <div class="command-label"> <span class="command-title">Full Pipeline</span> <button class="btn btn-sm btn-primary" onclick="copyFullPipeline()">Copy</button> </div> <div class="command-output"> <pre id="full-command-preview"><span class="cmd">python</span> run.py <span class="flag">&&</span> <span class="cmd">python</span> analyze.py</pre> </div> </div> </div> </div> </div> <!-- Config Page --> <div class="page" id="config-page"> <div class="section"> <div class="section-header"> <h2>Configuration</h2> <span class="badge">config.json</span> </div> <div class="section-body"> <p style="margin-bottom: 12px; font-size: 13px; color: var(--text-secondary);"> Edit your config.json file. Changes here need to be saved to the file manually.
+ </p> <textarea class="config-editor" id="config-editor" spellcheck="false"></textarea> <div id="config-status" class="config-status"></div> <div class="command-actions" style="margin-top: 12px;"> <button class="btn btn-primary" onclick="copyConfig()">Copy to Clipboard</button> <button class="btn btn-secondary" onclick="formatConfig()">Format JSON</button> <button class="btn btn-secondary" onclick="validateConfig()">Validate</button> <button class="btn btn-secondary" onclick="downloadConfig()">Download</button> <label class="btn btn-secondary" style="cursor: pointer;"> Load File
+ <input type="file" id="config-file-input" accept=".json" style="display: none;"> </label> </div> </div> </div> <div class="two-columns" style="margin-top: 20px;"> <div class="section"> <div class="section-header"> <h2>Quick Add Job Title</h2> </div> <div class="section-body"> <div class="option-row"> <input type="text" id="new-job-title" placeholder="e.g., VP Engineering"> </div> <button class="btn btn-success" onclick="addJobTitle()" style="margin-top: 8px;">Add to Config</button> </div> </div> <div class="section"> <div class="section-header"> <h2>Quick Add Exclusion</h2> </div> <div class="section-body"> <div class="option-row"> <input type="text" id="new-exclusion" placeholder="e.g., Intern"> </div> <button class="btn btn-secondary" onclick="addExclusion()" style="margin-top: 8px;">Add to Exclusions</button> </div> </div> </div> </div> <!-- Help Page --> <div class="page" id="help-page"> <div class="help-grid"> <div class="help-card"> <h3>Quick Start</h3> <table> <tr><td>Full pipeline</td><td><code>python run.py && python analyze.py</code></td></tr> <tr><td>Scrape only</td><td><code>python run.py</code></td></tr> <tr><td>Analyze only</td><td><code>python analyze.py</code></td></tr> <tr><td>LinkedIn only</td><td><code>python run.py --linkedin-only</code></td></tr> </table> </div> <div class="help-card"> <h3>Sensible Defaults</h3> <table> <tr><th>Setting</th><th>Default</th></tr> <tr><td>Location</td><td>London (90009496)</td></tr> <tr><td>Time Range</td><td>48 hours</td></tr> <tr><td>AI Backend</td><td>Claude</td></tr> <tr><td>AI Model</td><td>Opus</td></tr> <tr><td>Min Score</td><td>7</td></tr> <tr><td>Workers</td><td>CPU count - 2</td></tr> </table> </div> <div class="help-card"> <h3>LinkedIn GeoIDs</h3> <table> <tr><td>Greater London</td><td><code>90009496</code></td></tr> <tr><td>London (city)</td><td><code>102257491</code></td></tr> <tr><td>United Kingdom</td><td><code>101165590</code></td></tr> <tr><td>Manchester</td><td><code>90009706</code></td></tr> <tr><td>Birmingham</td><td><code>90009569</code></td></tr> <tr><td>Edinburgh</td><td><code>90009563</code></td></tr> </table> </div> <div class="help-card"> <h3>AI Models</h3> <table> <tr><th>Model</th><th>Description</th></tr> <tr><td>Opus</td><td>Best quality, recommended for job matching</td></tr> <tr><td>Sonnet</td><td>Good balance of speed and quality</td></tr> <tr><td>Haiku</td><td>Fastest, good for testing</td></tr> <tr><td>Ollama</td><td>Local, free (e.g., qwen2.5:7b)</td></tr> </table> </div> <div class="help-card"> <h3>Scraping Options</h3> <ul> <li><code>--linkedin-only</code> - Only run LinkedIn scraper (fastest)</li> <li><code>--workday-only</code> - Only run Workday scrapers (39+ companies)</li> <li><code>--playwright-only</code> - Only run Playwright (Google, Apple, etc.)</li> <li><code>--skip-linkedin</code> - Run all except LinkedIn</li> <li><code>--export-only</code> - Generate exports from existing data</li> <li><code>-t 24h</code> - Jobs from last 24 hours</li> <li><code>-g 101165590</code> - UK-wide search</li> </ul> </div> <div class="help-card"> <h3>Analysis Options</h3> <ul> <li><code>-i file.json</code> - Specify input file (default: latest)</li> <li><code>--cv path</code> - Path to CV file (default: data/cv.txt)</li> <li><code>-b ollama</code> - Use Ollama backend</li> <li><code>-m haiku</code> - Use Haiku model (faster)</li> <li><code>--min-score 8</code> - Higher threshold for matches</li> <li><code>-n 50</code> - Limit to 50 jobs (for testing)</li> <li><code>-s</code> - Sequential mode (no parallel)</li> </ul> </div> <div class="help-card"> <h3>Output Files</h3> <ul> <li><code>output/linkedin_jobs_*.json</code> - LinkedIn scraper results</li> <li><code>output/master_jobs_*.json</code> - Combined all scrapers</li> <li><code>output/all_jobs_*.xlsx</code> - Excel export</li> <li><code>output/analysis_*.json</code> - AI analysis results</li> <li><code>output/analysis_*.xlsx</code> - Analysis Excel report</li> <li><code>output/analysis_*_shortlist.json</code> - Matched jobs only</li> </ul> </div> <div class="help-card"> <h3>Config Structure</h3> <ul> <li><code>cv_file</code> - Path to your CV</li> <li><code>scraping.location</code> - Default location</li> <li><code>scraping.geo_id</code> - LinkedIn geoId</li> <li><code>scraping.time_range</code> - Default time filter</li> <li><code>scraping.job_titles</code> - Job titles to search</li> <li><code>analysis.backend</code> - claude or ollama</li> <li><code>analysis.model</code> - AI model to use</li> <li><code>filters.exclude_in_title</code> - Title blacklist</li> <li><code>filters.positive_keywords</code> - Score boosters</li> </ul> </div> </div> </div> </main> <div class="copy-feedback" id="copy-feedback">Copied to clipboard!</div> <script> // Default config template
+ const defaultConfig = {
+ "cv_file": "data/cv.txt",
+ "scraping": {
+ "location": "London",
+ "geo_id": "90009496",
+ "time_range": "48h",
+ "job_titles": [
+ "Head of Engineering",
+ "Director of Engineering",
+ "Senior Engineering Manager",
+ "Engineering Manager",
+ "VP Engineering" ],
+ "max_jobs_per_title": 0,
+ "easy_apply": false
+ },
+ "analysis": {
+ "backend": "claude",
+ "model": "opus",
+ "min_score": 7,
+ "parallel": true
+ },
+ "filters": {
+ "exclude_in_title": ["junior", "intern", "graduate", "apprentice"],
+ "exclude_in_description": [],
+ "positive_keywords": {"team": 4, "agile": 5, "leadership": 4},
+ "negative_keywords": {"hands-on coding": -1, "hardware": -5}
+ }
+ };
+
+ // Page navigation
+ document.querySelectorAll('nav a').forEach(link => {
+ link.addEventListener('click', (e) => {
+ e.preventDefault();
+ document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+ document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+ link.classList.add('active');
+ document.getElementById(link.dataset.page + '-page').classList.add('active');
+ });
+ });
+
+ // Initialize config editor
+ document.getElementById('config-editor').value = JSON.stringify(defaultConfig, null, 2);
+
+ // Scrape form elements
+ const scrapeInputs = {
+ allScrapers: document.getElementById('all-scrapers'),
+ linkedinOnly: document.getElementById('linkedin-only'),
+ workdayOnly: document.getElementById('workday-only'),
+ playwrightOnly: document.getElementById('playwright-only'),
+ geoId: document.getElementById('geo-id'),
+ timeRange: document.getElementById('time-range'),
+ workers: document.getElementById('scrape-workers'),
+ exportOnly: document.getElementById('export-only')
+ };
+
+ // Analyze form elements
+ const analyzeInputs = {
+ inputFile: document.getElementById('input-file'),
+ cvFile: document.getElementById('cv-file'),
+ backend: document.getElementById('backend'),
+ claudeModel: document.getElementById('claude-model'),
+ ollamaModel: document.getElementById('ollama-model'),
+ minScore: document.getElementById('min-score'),
+ workers: document.getElementById('analyze-workers'),
+ limit: document.getElementById('limit'),
+ sequential: document.getElementById('sequential')
+ };
+
+ const presetButtons = document.querySelectorAll('.preset-btn');
+
+ // Build scrape command
+ function buildScrapeCommand() {
+ let parts = ['<span class="cmd">python</span> run.py'];
+
+ if (scrapeInputs.linkedinOnly.checked) {
+ parts.push('<span class="flag">--linkedin-only</span>');
+ } else if (scrapeInputs.workdayOnly.checked) {
+ parts.push('<span class="flag">--workday-only</span>');
+ } else if (scrapeInputs.playwrightOnly.checked) {
+ parts.push('<span class="flag">--playwright-only</span>');
+ }
+
+ if (scrapeInputs.geoId.value.trim() && scrapeInputs.geoId.value.trim() !== '90009496') {
+ parts.push(`<span class="flag">-g</span> <span class="value">${escapeHtml(scrapeInputs.geoId.value.trim())}</span>`);
+ }
+
+ if (scrapeInputs.timeRange.value && scrapeInputs.timeRange.value !== '48h') {
+ parts.push(`<span class="flag">-t</span> <span class="value">${scrapeInputs.timeRange.value}</span>`);
+ }
+
+ if (scrapeInputs.workers.value) {
+ parts.push(`<span class="flag">-w</span> <span class="value">${scrapeInputs.workers.value}</span>`);
+ }
+
+ if (scrapeInputs.exportOnly.checked) {
+ parts.push('<span class="flag">--export-only</span>');
+ }
+
+ document.getElementById('scrape-command-preview').innerHTML = parts.join(' ');
+ updateFullPipeline();
+ }
+
+ function getPlainScrapeCommand() {
+ let parts = ['python run.py'];
+
+ if (scrapeInputs.linkedinOnly.checked) parts.push('--linkedin-only');
+ else if (scrapeInputs.workdayOnly.checked) parts.push('--workday-only');
+ else if (scrapeInputs.playwrightOnly.checked) parts.push('--playwright-only');
+
+ if (scrapeInputs.geoId.value.trim() && scrapeInputs.geoId.value.trim() !== '90009496') {
+ parts.push(`-g ${scrapeInputs.geoId.value.trim()}`);
+ }
+
+ if (scrapeInputs.timeRange.value && scrapeInputs.timeRange.value !== '48h') {
+ parts.push(`-t ${scrapeInputs.timeRange.value}`);
+ }
+
+ if (scrapeInputs.workers.value) parts.push(`-w ${scrapeInputs.workers.value}`);
+ if (scrapeInputs.exportOnly.checked) parts.push('--export-only');
+
+ return parts.join(' ');
+ }
+
+ // Build analyze command
+ function buildAnalyzeCommand() {
+ let parts = ['<span class="cmd">python</span> analyze.py'];
+
+ if (analyzeInputs.inputFile.value.trim()) {
+ parts.push(`<span class="flag">-i</span> <span class="value">"${escapeHtml(analyzeInputs.inputFile.value.trim())}"</span>`);
+ }
+
+ if (analyzeInputs.cvFile.value.trim() && analyzeInputs.cvFile.value.trim() !== 'data/cv.txt') {
+ parts.push(`<span class="flag">--cv</span> <span class="value">"${escapeHtml(analyzeInputs.cvFile.value.trim())}"</span>`);
+ }
+
+ if (analyzeInputs.backend.value !== 'claude') {
+ parts.push(`<span class="flag">-b</span> <span class="value">${analyzeInputs.backend.value}</span>`);
+ }
+
+ if (analyzeInputs.backend.value === 'claude' && analyzeInputs.claudeModel.value !== 'opus') {
+ parts.push(`<span class="flag">-m</span> <span class="value">${analyzeInputs.claudeModel.value}</span>`);
+ } else if (analyzeInputs.backend.value === 'ollama' && analyzeInputs.ollamaModel.value.trim()) {
+ parts.push(`<span class="flag">-m</span> <span class="value">${escapeHtml(analyzeInputs.ollamaModel.value.trim())}</span>`);
+ }
+
+ if (analyzeInputs.minScore.value && parseInt(analyzeInputs.minScore.value) !== 7) {
+ parts.push(`<span class="flag">--min-score</span> <span class="value">${analyzeInputs.minScore.value}</span>`);
+ }
+
+ if (analyzeInputs.workers.value) {
+ parts.push(`<span class="flag">-w</span> <span class="value">${analyzeInputs.workers.value}</span>`);
+ }
+
+ if (analyzeInputs.limit.value) {
+ parts.push(`<span class="flag">-n</span> <span class="value">${analyzeInputs.limit.value}</span>`);
+ }
+
+ if (analyzeInputs.sequential.checked) {
+ parts.push('<span class="flag">-s</span>');
+ }
+
+ document.getElementById('analyze-command-preview').innerHTML = parts.join(' ');
+ updateFullPipeline();
+ }
+
+ function getPlainAnalyzeCommand() {
+ let parts = ['python analyze.py'];
+
+ if (analyzeInputs.inputFile.value.trim()) {
+ parts.push(`-i "${analyzeInputs.inputFile.value.trim()}"`);
+ }
+
+ if (analyzeInputs.cvFile.value.trim() && analyzeInputs.cvFile.value.trim() !== 'data/cv.txt') {
+ parts.push(`--cv "${analyzeInputs.cvFile.value.trim()}"`);
+ }
+
+ if (analyzeInputs.backend.value !== 'claude') {
+ parts.push(`-b ${analyzeInputs.backend.value}`);
+ }
+
+ if (analyzeInputs.backend.value === 'claude' && analyzeInputs.claudeModel.value !== 'opus') {
+ parts.push(`-m ${analyzeInputs.claudeModel.value}`);
+ } else if (analyzeInputs.backend.value === 'ollama' && analyzeInputs.ollamaModel.value.trim()) {
+ parts.push(`-m ${analyzeInputs.ollamaModel.value.trim()}`);
+ }
+
+ if (analyzeInputs.minScore.value && parseInt(analyzeInputs.minScore.value) !== 7) {
+ parts.push(`--min-score ${analyzeInputs.minScore.value}`);
+ }
+
+ if (analyzeInputs.workers.value) parts.push(`-w ${analyzeInputs.workers.value}`);
+ if (analyzeInputs.limit.value) parts.push(`-n ${analyzeInputs.limit.value}`);
+ if (analyzeInputs.sequential.checked) parts.push('-s');
+
+ return parts.join(' ');
+ }
+
+ function escapeHtml(text) {
+ const div = document.createElement('div');
+ div.textContent = text;
+ return div.innerHTML;
+ }
+
+ function showFeedback(message) {
+ const feedback = document.getElementById('copy-feedback');
+ feedback.textContent = message || 'Copied to clipboard!';
+ feedback.classList.add('show');
+ setTimeout(() => feedback.classList.remove('show'), 2000);
+ }
+
+ function copyQuickCommand(cmd) {
+ navigator.clipboard.writeText(cmd).then(() => showFeedback());
+ }
+
+ function copyScrapeCommand() {
+ navigator.clipboard.writeText(getPlainScrapeCommand()).then(() => showFeedback());
+ }
+
+ function copyAnalyzeCommand() {
+ navigator.clipboard.writeText(getPlainAnalyzeCommand()).then(() => showFeedback());
+ }
+
+ function copyFullPipeline() {
+ const full = getPlainScrapeCommand() + ' && ' + getPlainAnalyzeCommand();
+ navigator.clipboard.writeText(full).then(() => showFeedback());
+ }
+
+ function updateFullPipeline() {
+ const scrape = document.getElementById('scrape-command-preview').innerHTML;
+ const analyze = document.getElementById('analyze-command-preview').innerHTML;
+ document.getElementById('full-command-preview').innerHTML =
+ scrape + ' <span class="flag">&&</span> ' + analyze;
+ }
+
+ function resetScrapeForm() {
+ scrapeInputs.allScrapers.checked = true;
+ scrapeInputs.linkedinOnly.checked = false;
+ scrapeInputs.workdayOnly.checked = false;
+ scrapeInputs.playwrightOnly.checked = false;
+ scrapeInputs.geoId.value = '';
+ scrapeInputs.timeRange.value = '';
+ scrapeInputs.workers.value = '';
+ scrapeInputs.exportOnly.checked = false;
+ presetButtons.forEach(btn => btn.classList.remove('active'));
+ presetButtons[0].classList.add('active');
+ buildScrapeCommand();
+ }
+
+ function resetAnalyzeForm() {
+ analyzeInputs.inputFile.value = '';
+ analyzeInputs.cvFile.value = '';
+ analyzeInputs.backend.value = 'claude';
+ analyzeInputs.claudeModel.value = 'opus';
+ analyzeInputs.ollamaModel.value = 'qwen2.5:7b';
+ analyzeInputs.minScore.value = '';
+ analyzeInputs.workers.value = '';
+ analyzeInputs.limit.value = '';
+ analyzeInputs.sequential.checked = false;
+ updateAnalyzeBackendState();
+ buildAnalyzeCommand();
+ }
+
+ function updateAnalyzeBackendState() {
+ const isClaude = analyzeInputs.backend.value === 'claude';
+
+ document.getElementById('claude-model-row').classList.toggle('disabled', !isClaude);
+ analyzeInputs.claudeModel.disabled = !isClaude;
+
+ document.getElementById('ollama-model-row').classList.toggle('disabled', isClaude);
+ analyzeInputs.ollamaModel.disabled = isClaude;
+ }
+
+ // Config functions
+ function showStatus(message, type) {
+ const status = document.getElementById('config-status');
+ status.textContent = message;
+ status.className = 'config-status ' + type;
+ setTimeout(() => status.className = 'config-status', 3000);
+ }
+
+ function copyConfig() {
+ const editor = document.getElementById('config-editor');
+ try {
+ JSON.parse(editor.value);
+ navigator.clipboard.writeText(editor.value).then(() => showFeedback('Config copied!'));
+ } catch (e) {
+ showStatus('Fix JSON errors before copying', 'error');
+ }
+ }
+
+ function formatConfig() {
+ const editor = document.getElementById('config-editor');
+ try {
+ const parsed = JSON.parse(editor.value);
+ editor.value = JSON.stringify(parsed, null, 2);
+ showStatus('Formatted successfully', 'success');
+ } catch (e) {
+ showStatus('Invalid JSON: ' + e.message, 'error');
+ }
+ }
+
+ function validateConfig() {
+ const editor = document.getElementById('config-editor');
+ try {
+ JSON.parse(editor.value);
+ showStatus('Valid JSON!', 'success');
+ } catch (e) {
+ showStatus('Invalid JSON: ' + e.message, 'error');
+ }
+ }
+
+ function downloadConfig() {
+ const editor = document.getElementById('config-editor');
+ try {
+ JSON.parse(editor.value);
+ const blob = new Blob([editor.value], { type: 'application/json' });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = 'config.json';
+ a.click();
+ URL.revokeObjectURL(url);
+ } catch (e) {
+ showStatus('Fix JSON errors before downloading', 'error');
+ }
+ }
+
+ function addJobTitle() {
+ const input = document.getElementById('new-job-title');
+ const title = input.value.trim();
+ if (!title) return;
+
+ const editor = document.getElementById('config-editor');
+ try {
+ const config = JSON.parse(editor.value);
+ if (!config.scraping) config.scraping = {};
+ if (!config.scraping.job_titles) config.scraping.job_titles = [];
+ if (!config.scraping.job_titles.includes(title)) {
+ config.scraping.job_titles.push(title);
+ editor.value = JSON.stringify(config, null, 2);
+ input.value = '';
+ showStatus(`Added: ${title}`, 'success');
+ } else {
+ showStatus('Title already exists', 'error');
+ }
+ } catch (e) {
+ showStatus('Fix JSON errors first', 'error');
+ }
+ }
+
+ function addExclusion() {
+ const input = document.getElementById('new-exclusion');
+ const keyword = input.value.trim();
+ if (!keyword) return;
+
+ const editor = document.getElementById('config-editor');
+ try {
+ const config = JSON.parse(editor.value);
+ if (!config.filters) config.filters = {};
+ if (!config.filters.exclude_in_title) config.filters.exclude_in_title = [];
+ if (!config.filters.exclude_in_title.includes(keyword)) {
+ config.filters.exclude_in_title.push(keyword);
+ editor.value = JSON.stringify(config, null, 2);
+ input.value = '';
+ showStatus(`Added exclusion: ${keyword}`, 'success');
+ } else {
+ showStatus('Keyword already exists', 'error');
+ }
+ } catch (e) {
+ showStatus('Fix JSON errors first', 'error');
+ }
+ }
+
+ // File upload
+ document.getElementById('config-file-input').addEventListener('change', (e) => {
+ const file = e.target.files[0];
+ if (file) {
+ const reader = new FileReader();
+ reader.onload = (event) => {
+ try {
+ const parsed = JSON.parse(event.target.result);
+ document.getElementById('config-editor').value = JSON.stringify(parsed, null, 2);
+ showStatus('Config loaded successfully', 'success');
+ } catch (err) {
+ showStatus('Invalid JSON file', 'error');
+ }
+ };
+ reader.readAsText(file);
+ }
+ });
+
+ // Initialize
+ function init() {
+ // Scrape form listeners
+ ['geoId', 'workers'].forEach(key => {
+ scrapeInputs[key].addEventListener('input', buildScrapeCommand);
+ });
+
+ scrapeInputs.timeRange.addEventListener('change', buildScrapeCommand);
+
+ ['allScrapers', 'linkedinOnly', 'workdayOnly', 'playwrightOnly', 'exportOnly'].forEach(key => {
+ scrapeInputs[key].addEventListener('change', () => {
+ if (key === 'linkedinOnly' && scrapeInputs.linkedinOnly.checked) {
+ scrapeInputs.allScrapers.checked = false;
+ scrapeInputs.workdayOnly.checked = false;
+ scrapeInputs.playwrightOnly.checked = false;
+ } else if (key === 'workdayOnly' && scrapeInputs.workdayOnly.checked) {
+ scrapeInputs.allScrapers.checked = false;
+ scrapeInputs.linkedinOnly.checked = false;
+ scrapeInputs.playwrightOnly.checked = false;
+ } else if (key === 'playwrightOnly' && scrapeInputs.playwrightOnly.checked) {
+ scrapeInputs.allScrapers.checked = false;
+ scrapeInputs.linkedinOnly.checked = false;
+ scrapeInputs.workdayOnly.checked = false;
+ } else if (key === 'allScrapers' && scrapeInputs.allScrapers.checked) {
+ scrapeInputs.linkedinOnly.checked = false;
+ scrapeInputs.workdayOnly.checked = false;
+ scrapeInputs.playwrightOnly.checked = false;
+ }
+ buildScrapeCommand();
+ });
+ });
+
+ // Analyze form listeners
+ ['inputFile', 'cvFile', 'ollamaModel', 'minScore', 'workers', 'limit'].forEach(key => {
+ analyzeInputs[key].addEventListener('input', buildAnalyzeCommand);
+ });
+
+ analyzeInputs.backend.addEventListener('change', () => {
+ updateAnalyzeBackendState();
+ buildAnalyzeCommand();
+ });
+
+ analyzeInputs.claudeModel.addEventListener('change', buildAnalyzeCommand);
+ analyzeInputs.sequential.addEventListener('change', buildAnalyzeCommand);
+
+ // Preset buttons
+ presetButtons.forEach(btn => {
+ btn.addEventListener('click', (e) => {
+ e.preventDefault();
+ scrapeInputs.geoId.value = btn.dataset.geoid;
+ presetButtons.forEach(b => b.classList.remove('active'));
+ btn.classList.add('active');
+ buildScrapeCommand();
+ });
+ });
+
+ updateAnalyzeBackendState();
+ buildAnalyzeCommand();
+ buildScrapeCommand();
+ }
+
+ document.addEventListener('DOMContentLoaded', init);
+ </script>
 </body>
 </html>

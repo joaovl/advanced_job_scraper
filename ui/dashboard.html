@@ -1,912 +1,810 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Search Analytics Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <style>
-        :root {
-            --bg-primary: #0d1117;
-            --bg-secondary: #161b22;
-            --bg-card: #21262d;
-            --border-color: #30363d;
-            --text-primary: #f0f6fc;
-            --text-secondary: #8b949e;
-            --accent-blue: #0a66c2;
-            --accent-blue-light: #1a85ff;
-            --success-green: #238636;
-            --success-light: #3fb950;
-            --danger-red: #da3633;
-            --danger-light: #f85149;
-            --warning-yellow: #d29922;
-            --warning-light: #e3b341;
-        }
+<head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Job Search Analytics Dashboard</title> <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script> <style> :root {
+ --bg-primary: #0d1117;
+ --bg-secondary: #161b22;
+ --bg-card: #21262d;
+ --border-color: #30363d;
+ --text-primary: #f0f6fc;
+ --text-secondary: #8b949e;
+ --accent-blue: #0a66c2;
+ --accent-blue-light: #1a85ff;
+ --success-green: #238636;
+ --success-light: #3fb950;
+ --danger-red: #da3633;
+ --danger-light: #f85149;
+ --warning-yellow: #d29922;
+ --warning-light: #e3b341;
+ }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+ * {
+ margin: 0;
+ padding: 0;
+ box-sizing: border-box;
+ }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            line-height: 1.6;
-        }
+ body {
+ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+ background: var(--bg-primary);
+ color: var(--text-primary);
+ min-height: 100vh;
+ line-height: 1.6;
+ }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
+ .container {
+ max-width: 1400px;
+ margin: 0 auto;
+ padding: 2rem;
+ }
 
-        /* Header */
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-            padding: 2rem;
-            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
-            border-radius: 16px;
-            border: 1px solid var(--border-color);
-        }
+ /* Header */
+ .header {
+ text-align: center;
+ margin-bottom: 3rem;
+ padding: 2rem;
+ background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+ border-radius: 16px;
+ border: 1px solid var(--border-color);
+ }
 
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-blue-light) 0%, var(--accent-blue) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-        }
+ .header h1 {
+ font-size: 2.5rem;
+ font-weight: 700;
+ background: linear-gradient(135deg, var(--accent-blue-light) 0%, var(--accent-blue) 100%);
+ -webkit-background-clip: text;
+ -webkit-text-fill-color: transparent;
+ background-clip: text;
+ margin-bottom: 0.5rem;
+ }
 
-        .header .subtitle {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-        }
+ .header .subtitle {
+ color: var(--text-secondary);
+ font-size: 1.1rem;
+ }
 
-        .header .badge {
-            display: inline-block;
-            background: var(--accent-blue);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            margin-top: 1rem;
-        }
+ .header .badge {
+ display: inline-block;
+ background: var(--accent-blue);
+ color: white;
+ padding: 0.25rem 0.75rem;
+ border-radius: 20px;
+ font-size: 0.85rem;
+ margin-top: 1rem;
+ }
 
-        /* Drop Zone */
-        .drop-zone {
-            border: 2px dashed var(--border-color);
-            border-radius: 16px;
-            padding: 4rem 2rem;
-            text-align: center;
-            margin-bottom: 2rem;
-            transition: all 0.3s ease;
-            background: var(--bg-secondary);
-            cursor: pointer;
-        }
+ /* Drop Zone */
+ .drop-zone {
+ border: 2px dashed var(--border-color);
+ border-radius: 16px;
+ padding: 4rem 2rem;
+ text-align: center;
+ margin-bottom: 2rem;
+ transition: all 0.3s ease;
+ background: var(--bg-secondary);
+ cursor: pointer;
+ }
 
-        .drop-zone:hover, .drop-zone.dragover {
-            border-color: var(--accent-blue);
-            background: rgba(10, 102, 194, 0.1);
-        }
+ .drop-zone:hover, .drop-zone.dragover {
+ border-color: var(--accent-blue);
+ background: rgba(10, 102, 194, 0.1);
+ }
 
-        .drop-zone-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-        }
+ .drop-zone-icon {
+ font-size: 4rem;
+ margin-bottom: 1rem;
+ }
 
-        .drop-zone h3 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
+ .drop-zone h3 {
+ font-size: 1.5rem;
+ margin-bottom: 0.5rem;
+ }
 
-        .drop-zone p {
-            color: var(--text-secondary);
-        }
+ .drop-zone p {
+ color: var(--text-secondary);
+ }
 
-        .drop-zone input[type="file"] {
-            display: none;
-        }
+ .drop-zone input[type="file"] {
+ display: none;
+ }
 
-        .btn {
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
-            background: var(--accent-blue);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 1rem;
-        }
+ .btn {
+ display: inline-block;
+ padding: 0.75rem 1.5rem;
+ background: var(--accent-blue);
+ color: white;
+ border: none;
+ border-radius: 8px;
+ font-size: 1rem;
+ cursor: pointer;
+ transition: all 0.2s ease;
+ margin-top: 1rem;
+ }
 
-        .btn:hover {
-            background: var(--accent-blue-light);
-            transform: translateY(-2px);
-        }
+ .btn:hover {
+ background: var(--accent-blue-light);
+ transform: translateY(-2px);
+ }
 
-        /* Dashboard (hidden until data loaded) */
-        .dashboard {
-            display: none;
-        }
+ /* Dashboard (hidden until data loaded) */
+ .dashboard {
+ display: none;
+ }
 
-        .dashboard.visible {
-            display: block;
-        }
+ .dashboard.visible {
+ display: block;
+ }
 
-        /* Hero Stats */
-        .hero-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
+ /* Hero Stats */
+ .hero-stats {
+ display: grid;
+ grid-template-columns: repeat(4, 1fr);
+ gap: 1.5rem;
+ margin-bottom: 3rem;
+ }
 
-        .stat-card {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 2rem;
-            text-align: center;
-            border: 1px solid var(--border-color);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
+ .stat-card {
+ background: var(--bg-card);
+ border-radius: 16px;
+ padding: 2rem;
+ text-align: center;
+ border: 1px solid var(--border-color);
+ transition: transform 0.3s ease, box-shadow 0.3s ease;
+ }
 
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-        }
+ .stat-card:hover {
+ transform: translateY(-4px);
+ box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+ }
 
-        .stat-card.total {
-            border-top: 4px solid var(--accent-blue);
-        }
+ .stat-card.total {
+ border-top: 4px solid var(--accent-blue);
+ }
 
-        .stat-card.matched {
-            border-top: 4px solid var(--success-green);
-        }
+ .stat-card.matched {
+ border-top: 4px solid var(--success-green);
+ }
 
-        .stat-card.rejected {
-            border-top: 4px solid var(--danger-red);
-        }
+ .stat-card.rejected {
+ border-top: 4px solid var(--danger-red);
+ }
 
-        .stat-card.rate {
-            border-top: 4px solid var(--warning-yellow);
-        }
+ .stat-card.rate {
+ border-top: 4px solid var(--warning-yellow);
+ }
 
-        .stat-value {
-            font-size: 3rem;
-            font-weight: 700;
-            line-height: 1.2;
-        }
+ .stat-value {
+ font-size: 3rem;
+ font-weight: 700;
+ line-height: 1.2;
+ }
 
-        .stat-card.total .stat-value { color: var(--accent-blue-light); }
-        .stat-card.matched .stat-value { color: var(--success-light); }
-        .stat-card.rejected .stat-value { color: var(--danger-light); }
-        .stat-card.rate .stat-value { color: var(--warning-light); }
+ .stat-card.total .stat-value { color: var(--accent-blue-light); }
+ .stat-card.matched .stat-value { color: var(--success-light); }
+ .stat-card.rejected .stat-value { color: var(--danger-light); }
+ .stat-card.rate .stat-value { color: var(--warning-light); }
 
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 1rem;
-            margin-top: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+ .stat-label {
+ color: var(--text-secondary);
+ font-size: 1rem;
+ margin-top: 0.5rem;
+ text-transform: uppercase;
+ letter-spacing: 1px;
+ }
 
-        /* Charts Row */
-        .charts-row {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
+ /* Charts Row */
+ .charts-row {
+ display: grid;
+ grid-template-columns: repeat(2, 1fr);
+ gap: 1.5rem;
+ margin-bottom: 3rem;
+ }
 
-        .chart-card {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 1.5rem;
-            border: 1px solid var(--border-color);
-        }
+ .chart-card {
+ background: var(--bg-card);
+ border-radius: 16px;
+ padding: 1.5rem;
+ border: 1px solid var(--border-color);
+ }
 
-        .chart-card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-        }
+ .chart-card h3 {
+ font-size: 1.25rem;
+ margin-bottom: 1rem;
+ color: var(--text-primary);
+ }
 
-        .chart-container {
-            position: relative;
-            height: 280px;
-        }
+ .chart-container {
+ position: relative;
+ height: 280px;
+ }
 
-        /* Section Headers */
-        .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1.5rem;
-        }
+ /* Section Headers */
+ .section-header {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ margin-bottom: 1.5rem;
+ }
 
-        .section-header h2 {
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+ .section-header h2 {
+ font-size: 1.5rem;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ }
 
-        .section-header .count {
-            background: var(--bg-card);
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
+ .section-header .count {
+ background: var(--bg-card);
+ padding: 0.25rem 0.75rem;
+ border-radius: 20px;
+ font-size: 0.9rem;
+ color: var(--text-secondary);
+ }
 
-        /* Top Matches Grid */
-        .matches-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
+ /* Top Matches Grid */
+ .matches-grid {
+ display: grid;
+ grid-template-columns: repeat(3, 1fr);
+ gap: 1.5rem;
+ margin-bottom: 3rem;
+ }
 
-        .job-card {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 1.5rem;
-            border: 1px solid var(--border-color);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
+ .job-card {
+ background: var(--bg-card);
+ border-radius: 16px;
+ padding: 1.5rem;
+ border: 1px solid var(--border-color);
+ transition: transform 0.3s ease, box-shadow 0.3s ease;
+ display: flex;
+ flex-direction: column;
+ }
 
-        .job-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-            border-color: var(--accent-blue);
-        }
+ .job-card:hover {
+ transform: translateY(-4px);
+ box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+ border-color: var(--accent-blue);
+ }
 
-        .job-card-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
+ .job-card-header {
+ display: flex;
+ align-items: flex-start;
+ gap: 1rem;
+ margin-bottom: 1rem;
+ }
 
-        .score-badge {
-            background: linear-gradient(135deg, var(--success-green) 0%, var(--success-light) 100%);
-            color: white;
-            padding: 0.5rem 0.75rem;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            flex-shrink: 0;
-        }
+ .score-badge {
+ background: linear-gradient(135deg, var(--success-green) 0%, var(--success-light) 100%);
+ color: white;
+ padding: 0.5rem 0.75rem;
+ border-radius: 12px;
+ font-weight: 700;
+ font-size: 1.1rem;
+ display: flex;
+ align-items: center;
+ gap: 0.25rem;
+ flex-shrink: 0;
+ }
 
-        .score-badge.high { background: linear-gradient(135deg, #238636, #3fb950); }
-        .score-badge.medium { background: linear-gradient(135deg, #9e6a03, #d29922); }
+ .score-badge.high { background: linear-gradient(135deg, #238636, #3fb950); }
+ .score-badge.medium { background: linear-gradient(135deg, #9e6a03, #d29922); }
 
-        .job-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            line-height: 1.3;
-        }
+ .job-title {
+ font-size: 1.1rem;
+ font-weight: 600;
+ color: var(--text-primary);
+ line-height: 1.3;
+ }
 
-        .job-meta {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
+ .job-meta {
+ color: var(--text-secondary);
+ font-size: 0.9rem;
+ margin-bottom: 1rem;
+ }
 
-        .job-meta .company {
-            font-weight: 500;
-            color: var(--accent-blue-light);
-        }
+ .job-meta .company {
+ font-weight: 500;
+ color: var(--accent-blue-light);
+ }
 
-        .job-reason {
-            color: var(--text-secondary);
-            font-size: 0.85rem;
-            line-height: 1.5;
-            flex-grow: 1;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin-bottom: 1rem;
-        }
+ .job-reason {
+ color: var(--text-secondary);
+ font-size: 0.85rem;
+ line-height: 1.5;
+ flex-grow: 1;
+ display: -webkit-box;
+ -webkit-line-clamp: 3;
+ -webkit-box-orient: vertical;
+ overflow: hidden;
+ margin-bottom: 1rem;
+ }
 
-        .job-card .btn {
-            align-self: flex-start;
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-            margin-top: auto;
-        }
+ .job-card .btn {
+ align-self: flex-start;
+ padding: 0.5rem 1rem;
+ font-size: 0.9rem;
+ margin-top: auto;
+ }
 
-        /* Company Leaderboard */
-        .leaderboard {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 1.5rem;
-            border: 1px solid var(--border-color);
-            margin-bottom: 3rem;
-        }
+ /* Company Leaderboard */
+ .leaderboard {
+ background: var(--bg-card);
+ border-radius: 16px;
+ padding: 1.5rem;
+ border: 1px solid var(--border-color);
+ margin-bottom: 3rem;
+ }
 
-        .leaderboard h3 {
-            font-size: 1.25rem;
-            margin-bottom: 1.5rem;
-        }
+ .leaderboard h3 {
+ font-size: 1.25rem;
+ margin-bottom: 1.5rem;
+ }
 
-        .leaderboard-item {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--border-color);
-        }
+ .leaderboard-item {
+ display: flex;
+ align-items: center;
+ padding: 0.75rem 0;
+ border-bottom: 1px solid var(--border-color);
+ }
 
-        .leaderboard-item:last-child {
-            border-bottom: none;
-        }
+ .leaderboard-item:last-child {
+ border-bottom: none;
+ }
 
-        .leaderboard-rank {
-            width: 2rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-        }
+ .leaderboard-rank {
+ width: 2rem;
+ font-weight: 700;
+ color: var(--text-secondary);
+ }
 
-        .leaderboard-company {
-            flex: 1;
-            font-weight: 500;
-        }
+ .leaderboard-company {
+ flex: 1;
+ font-weight: 500;
+ }
 
-        .leaderboard-bar-container {
-            width: 200px;
-            height: 8px;
-            background: var(--bg-secondary);
-            border-radius: 4px;
-            margin-right: 1rem;
-            overflow: hidden;
-        }
+ .leaderboard-bar-container {
+ width: 200px;
+ height: 8px;
+ background: var(--bg-secondary);
+ border-radius: 4px;
+ margin-right: 1rem;
+ overflow: hidden;
+ }
 
-        .leaderboard-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-blue-light));
-            border-radius: 4px;
-            transition: width 1s ease;
-        }
+ .leaderboard-bar {
+ height: 100%;
+ background: linear-gradient(90deg, var(--accent-blue), var(--accent-blue-light));
+ border-radius: 4px;
+ transition: width 1s ease;
+ }
 
-        .leaderboard-count {
-            font-weight: 600;
-            color: var(--accent-blue-light);
-            min-width: 2rem;
-            text-align: right;
-        }
+ .leaderboard-count {
+ font-weight: 600;
+ color: var(--accent-blue-light);
+ min-width: 2rem;
+ text-align: right;
+ }
 
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-secondary);
-            border-top: 1px solid var(--border-color);
-        }
+ /* Footer */
+ .footer {
+ text-align: center;
+ padding: 2rem;
+ color: var(--text-secondary);
+ border-top: 1px solid var(--border-color);
+ }
 
-        .footer .powered-by {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
+ .footer .powered-by {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
+ margin-bottom: 0.5rem;
+ }
 
-        .footer .ai-badge {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
+ .footer .ai-badge {
+ background: linear-gradient(135deg, #6366f1, #8b5cf6);
+ color: white;
+ padding: 0.25rem 0.5rem;
+ border-radius: 6px;
+ font-size: 0.8rem;
+ font-weight: 500;
+ }
 
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .matches-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
+ /* Responsive */
+ @media (max-width: 1200px) {
+ .matches-grid {
+ grid-template-columns: repeat(2, 1fr);
+ }
+ }
 
-        @media (max-width: 900px) {
-            .hero-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .charts-row {
-                grid-template-columns: 1fr;
-            }
-        }
+ @media (max-width: 900px) {
+ .hero-stats {
+ grid-template-columns: repeat(2, 1fr);
+ }
+ .charts-row {
+ grid-template-columns: 1fr;
+ }
+ }
 
-        @media (max-width: 600px) {
-            .container {
-                padding: 1rem;
-            }
-            .hero-stats {
-                grid-template-columns: 1fr;
-            }
-            .matches-grid {
-                grid-template-columns: 1fr;
-            }
-            .header h1 {
-                font-size: 1.8rem;
-            }
-            .stat-value {
-                font-size: 2.5rem;
-            }
-        }
+ @media (max-width: 600px) {
+ .container {
+ padding: 1rem;
+ }
+ .hero-stats {
+ grid-template-columns: 1fr;
+ }
+ .matches-grid {
+ grid-template-columns: 1fr;
+ }
+ .header h1 {
+ font-size: 1.8rem;
+ }
+ .stat-value {
+ font-size: 2.5rem;
+ }
+ }
 
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+ /* Animations */
+ @keyframes fadeInUp {
+ from {
+ opacity: 0;
+ transform: translateY(20px);
+ }
+ to {
+ opacity: 1;
+ transform: translateY(0);
+ }
+ }
 
-        .animate-in {
-            animation: fadeInUp 0.5s ease forwards;
-        }
+ .animate-in {
+ animation: fadeInUp 0.5s ease forwards;
+ }
 
-        .animate-delay-1 { animation-delay: 0.1s; opacity: 0; }
-        .animate-delay-2 { animation-delay: 0.2s; opacity: 0; }
-        .animate-delay-3 { animation-delay: 0.3s; opacity: 0; }
-        .animate-delay-4 { animation-delay: 0.4s; opacity: 0; }
-    </style>
+ .animate-delay-1 { animation-delay: 0.1s; opacity: 0; }
+ .animate-delay-2 { animation-delay: 0.2s; opacity: 0; }
+ .animate-delay-3 { animation-delay: 0.3s; opacity: 0; }
+ .animate-delay-4 { animation-delay: 0.4s; opacity: 0; }
+ </style>
 </head>
 <body>
 <nav style="display:flex;gap:4px;align-items:center;padding:10px 20px;background:#161c26;border-bottom:1px solid #26303e;border-top:3px solid #e6953f;font-family:Segoe UI,system-ui,sans-serif">
-<a href="/" style="font-weight:700;color:#e8ecf3;text-decoration:none;margin-right:14px">✈️ Job Command Center</a>
+<a href="/" style="font-weight:700;color:#e8ecf3;text-decoration:none;margin-right:14px">Job Command Center</a>
 <a href="/" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Home</a>
 <a href="/library" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Library</a>
 <a href="/run" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Run Center</a>
 <a href="/dashboard?file=/api/analysis.json" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Dashboard</a>
 <a href="/builder" style="color:#9aa5b6;text-decoration:none;padding:6px 11px;border-radius:8px;font-size:13px">Command Builder</a>
-</nav>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <h1>Job Search Analytics</h1>
-            <p class="subtitle" id="subtitle">Upload an analysis JSON file to view insights</p>
-            <span class="badge" id="modelBadge" style="display: none;"></span>
-        </header>
+</nav> <div class="container"> <!-- Header --> <header class="header"> <h1>Job Search Analytics</h1> <p class="subtitle" id="subtitle">Upload an analysis JSON file to view insights</p> <span class="badge" id="modelBadge" style="display: none;"></span> </header> <!-- Drop Zone (shown before data) --> <div class="drop-zone" id="dropZone"> <div class="drop-zone-icon"></div> <h3>Drop your analysis JSON here</h3> <p>or click to browse files</p> <input type="file" id="fileInput" accept=".json"> <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button> </div> <!-- Dashboard (hidden until data) --> <div class="dashboard" id="dashboard"> <!-- Hero Stats --> <div class="hero-stats"> <div class="stat-card total animate-in animate-delay-1"> <div class="stat-value" id="statTotal">0</div> <div class="stat-label">Total Analyzed</div> </div> <div class="stat-card matched animate-in animate-delay-2"> <div class="stat-value" id="statMatched">0</div> <div class="stat-label">Matched</div> </div> <div class="stat-card rejected animate-in animate-delay-3"> <div class="stat-value" id="statRejected">0</div> <div class="stat-label">Rejected</div> </div> <div class="stat-card rate animate-in animate-delay-4"> <div class="stat-value" id="statRate">0%</div> <div class="stat-label">Match Rate</div> </div> </div> <!-- Charts Row --> <div class="charts-row"> <div class="chart-card animate-in"> <h3>Score Distribution</h3> <div class="chart-container"> <canvas id="scoreChart"></canvas> </div> </div> <div class="chart-card animate-in"> <h3>Processing Pipeline</h3> <div class="chart-container"> <canvas id="pipelineChart"></canvas> </div> </div> </div> <!-- Top Matches --> <div class="section-header"> <h2>Top Opportunities <span class="count" id="matchCount">0 matches</span></h2> </div> <div class="matches-grid" id="matchesGrid"> <!-- Job cards will be inserted here --> </div> <!-- Company Leaderboard --> <div class="leaderboard"> <h3>Companies with Most Matches</h3> <div id="leaderboardList"> <!-- Leaderboard items will be inserted here --> </div> </div> <!-- Footer --> <footer class="footer"> <div class="powered-by"> Powered by <span class="ai-badge" id="footerModel">Claude</span> </div> <p id="timestamp"></p> </footer> </div> </div> <script> // Chart instances
+ let scoreChart = null;
+ let pipelineChart = null;
 
-        <!-- Drop Zone (shown before data) -->
-        <div class="drop-zone" id="dropZone">
-            <div class="drop-zone-icon">📊</div>
-            <h3>Drop your analysis JSON here</h3>
-            <p>or click to browse files</p>
-            <input type="file" id="fileInput" accept=".json">
-            <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
-        </div>
+ // DOM Elements
+ const dropZone = document.getElementById('dropZone');
+ const fileInput = document.getElementById('fileInput');
+ const dashboard = document.getElementById('dashboard');
 
-        <!-- Dashboard (hidden until data) -->
-        <div class="dashboard" id="dashboard">
-            <!-- Hero Stats -->
-            <div class="hero-stats">
-                <div class="stat-card total animate-in animate-delay-1">
-                    <div class="stat-value" id="statTotal">0</div>
-                    <div class="stat-label">Total Analyzed</div>
-                </div>
-                <div class="stat-card matched animate-in animate-delay-2">
-                    <div class="stat-value" id="statMatched">0</div>
-                    <div class="stat-label">Matched</div>
-                </div>
-                <div class="stat-card rejected animate-in animate-delay-3">
-                    <div class="stat-value" id="statRejected">0</div>
-                    <div class="stat-label">Rejected</div>
-                </div>
-                <div class="stat-card rate animate-in animate-delay-4">
-                    <div class="stat-value" id="statRate">0%</div>
-                    <div class="stat-label">Match Rate</div>
-                </div>
-            </div>
+ // Event Listeners
+ dropZone.addEventListener('click', () => fileInput.click());
+ dropZone.addEventListener('dragover', handleDragOver);
+ dropZone.addEventListener('dragleave', handleDragLeave);
+ dropZone.addEventListener('drop', handleDrop);
+ fileInput.addEventListener('change', handleFileSelect);
 
-            <!-- Charts Row -->
-            <div class="charts-row">
-                <div class="chart-card animate-in">
-                    <h3>Score Distribution</h3>
-                    <div class="chart-container">
-                        <canvas id="scoreChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card animate-in">
-                    <h3>Processing Pipeline</h3>
-                    <div class="chart-container">
-                        <canvas id="pipelineChart"></canvas>
-                    </div>
-                </div>
-            </div>
+ // Check URL parameter for file
+ const urlParams = new URLSearchParams(window.location.search);
+ const fileParam = urlParams.get('file');
+ if (fileParam) {
+ fetch(fileParam)
+ .then(res => res.json())
+ .then(data => renderDashboard(data))
+ .catch(err => console.error('Failed to load file:', err));
+ }
 
-            <!-- Top Matches -->
-            <div class="section-header">
-                <h2>Top Opportunities <span class="count" id="matchCount">0 matches</span></h2>
-            </div>
-            <div class="matches-grid" id="matchesGrid">
-                <!-- Job cards will be inserted here -->
-            </div>
+ function handleDragOver(e) {
+ e.preventDefault();
+ dropZone.classList.add('dragover');
+ }
 
-            <!-- Company Leaderboard -->
-            <div class="leaderboard">
-                <h3>Companies with Most Matches</h3>
-                <div id="leaderboardList">
-                    <!-- Leaderboard items will be inserted here -->
-                </div>
-            </div>
+ function handleDragLeave(e) {
+ e.preventDefault();
+ dropZone.classList.remove('dragover');
+ }
 
-            <!-- Footer -->
-            <footer class="footer">
-                <div class="powered-by">
-                    Powered by <span class="ai-badge" id="footerModel">Claude</span>
-                </div>
-                <p id="timestamp"></p>
-            </footer>
-        </div>
-    </div>
+ function handleDrop(e) {
+ e.preventDefault();
+ dropZone.classList.remove('dragover');
+ const file = e.dataTransfer.files[0];
+ if (file && file.name.endsWith('.json')) {
+ loadFile(file);
+ }
+ }
 
-    <script>
-        // Chart instances
-        let scoreChart = null;
-        let pipelineChart = null;
+ function handleFileSelect(e) {
+ const file = e.target.files[0];
+ if (file) {
+ loadFile(file);
+ }
+ }
 
-        // DOM Elements
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const dashboard = document.getElementById('dashboard');
+ async function loadFile(file) {
+ try {
+ const text = await file.text();
+ const data = JSON.parse(text);
+ renderDashboard(data);
+ } catch (err) {
+ console.error('Failed to parse JSON:', err);
+ alert('Failed to parse JSON file. Please check the format.');
+ }
+ }
 
-        // Event Listeners
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', handleDragOver);
-        dropZone.addEventListener('dragleave', handleDragLeave);
-        dropZone.addEventListener('drop', handleDrop);
-        fileInput.addEventListener('change', handleFileSelect);
+ function renderDashboard(data) {
+ // Handle both array format and object with jobs array
+ const jobs = Array.isArray(data) ? data : (data.jobs || data.results || []);
 
-        // Check URL parameter for file
-        const urlParams = new URLSearchParams(window.location.search);
-        const fileParam = urlParams.get('file');
-        if (fileParam) {
-            fetch(fileParam)
-                .then(res => res.json())
-                .then(data => renderDashboard(data))
-                .catch(err => console.error('Failed to load file:', err));
-        }
+ if (!jobs.length) {
+ alert('No jobs found in the file');
+ return;
+ }
 
-        function handleDragOver(e) {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        }
+ // Hide drop zone, show dashboard
+ dropZone.style.display = 'none';
+ dashboard.classList.add('visible');
 
-        function handleDragLeave(e) {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-        }
+ // Compute stats
+ const stats = computeStats(jobs);
 
-        function handleDrop(e) {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            const file = e.dataTransfer.files[0];
-            if (file && file.name.endsWith('.json')) {
-                loadFile(file);
-            }
-        }
+ // Update header
+ document.getElementById('subtitle').textContent = `Analyzed ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file) {
-                loadFile(file);
-            }
-        }
+ // Try to detect model from data
+ const model = data.model || data.analysis_model || 'Claude';
+ document.getElementById('modelBadge').textContent = `Analyzed with ${model}`;
+ document.getElementById('modelBadge').style.display = 'inline-block';
+ document.getElementById('footerModel').textContent = model;
 
-        async function loadFile(file) {
-            try {
-                const text = await file.text();
-                const data = JSON.parse(text);
-                renderDashboard(data);
-            } catch (err) {
-                console.error('Failed to parse JSON:', err);
-                alert('Failed to parse JSON file. Please check the format.');
-            }
-        }
+ // Animate counters
+ animateCounter('statTotal', stats.total);
+ animateCounter('statMatched', stats.matched);
+ animateCounter('statRejected', stats.rejected);
+ animateCounterPercent('statRate', stats.matchRate);
 
-        function renderDashboard(data) {
-            // Handle both array format and object with jobs array
-            const jobs = Array.isArray(data) ? data : (data.jobs || data.results || []);
+ // Render charts
+ renderScoreChart(stats.scoreDistribution);
+ renderPipelineChart(stats);
 
-            if (!jobs.length) {
-                alert('No jobs found in the file');
-                return;
-            }
+ // Render top matches
+ renderTopMatches(stats.topMatches);
+ document.getElementById('matchCount').textContent = `${stats.matched} matches`;
 
-            // Hide drop zone, show dashboard
-            dropZone.style.display = 'none';
-            dashboard.classList.add('visible');
+ // Render leaderboard
+ renderLeaderboard(stats.topCompanies);
 
-            // Compute stats
-            const stats = computeStats(jobs);
+ // Timestamp
+ document.getElementById('timestamp').textContent = `Generated ${new Date().toLocaleString()}`;
+ }
 
-            // Update header
-            document.getElementById('subtitle').textContent = `Analyzed ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+ function computeStats(jobs) {
+ const matched = jobs.filter(j => j.decision === 'MATCHED');
+ const rejected = jobs.filter(j => j.decision === 'REJECTED');
 
-            // Try to detect model from data
-            const model = data.model || data.analysis_model || 'Claude';
-            document.getElementById('modelBadge').textContent = `Analyzed with ${model}`;
-            document.getElementById('modelBadge').style.display = 'inline-block';
-            document.getElementById('footerModel').textContent = model;
+ // Score distribution
+ const scoreDistribution = {
+ 'Perfect (9-10)': jobs.filter(j => j.score >= 9).length,
+ 'Good (7-8)': jobs.filter(j => j.score >= 7 && j.score < 9).length,
+ 'Partial (5-6)': jobs.filter(j => j.score >= 5 && j.score < 7).length,
+ 'Reject (1-4)': jobs.filter(j => j.score >= 1 && j.score < 5).length,
+ 'Filtered (0)': jobs.filter(j => j.score === 0 || j.score === null || j.score === undefined).length
+ };
 
-            // Animate counters
-            animateCounter('statTotal', stats.total);
-            animateCounter('statMatched', stats.matched);
-            animateCounter('statRejected', stats.rejected);
-            animateCounterPercent('statRate', stats.matchRate);
+ // Top companies with matches
+ const companyCounts = {};
+ matched.forEach(j => {
+ const company = j.company || 'Unknown';
+ companyCounts[company] = (companyCounts[company] || 0) + 1;
+ });
+ const topCompanies = Object.entries(companyCounts)
+ .sort((a, b) => b[1] - a[1])
+ .slice(0, 8);
 
-            // Render charts
-            renderScoreChart(stats.scoreDistribution);
-            renderPipelineChart(stats);
+ // Top matches (highest scores)
+ const topMatches = matched
+ .sort((a, b) => (b.score || 0) - (a.score || 0))
+ .slice(0, 6);
 
-            // Render top matches
-            renderTopMatches(stats.topMatches);
-            document.getElementById('matchCount').textContent = `${stats.matched} matches`;
+ return {
+ total: jobs.length,
+ matched: matched.length,
+ rejected: rejected.length,
+ matchRate: jobs.length > 0 ? (matched.length / jobs.length * 100) : 0,
+ scoreDistribution,
+ topCompanies,
+ topMatches,
+ quickFiltered: jobs.filter(j => j.score === 0 || j.score === null).length,
+ aiRejected: jobs.filter(j => j.score > 0 && j.score < 7).length
+ };
+ }
 
-            // Render leaderboard
-            renderLeaderboard(stats.topCompanies);
+ function animateCounter(elementId, target) {
+ const element = document.getElementById(elementId);
+ const duration = 1500;
+ const steps = 60;
+ const increment = target / steps;
+ let current = 0;
+ const interval = duration / steps;
 
-            // Timestamp
-            document.getElementById('timestamp').textContent = `Generated ${new Date().toLocaleString()}`;
-        }
+ const timer = setInterval(() => {
+ current += increment;
+ if (current >= target) {
+ current = target;
+ clearInterval(timer);
+ }
+ element.textContent = Math.round(current).toLocaleString();
+ }, interval);
+ }
 
-        function computeStats(jobs) {
-            const matched = jobs.filter(j => j.decision === 'MATCHED');
-            const rejected = jobs.filter(j => j.decision === 'REJECTED');
+ function animateCounterPercent(elementId, target) {
+ const element = document.getElementById(elementId);
+ const duration = 1500;
+ const steps = 60;
+ const increment = target / steps;
+ let current = 0;
+ const interval = duration / steps;
 
-            // Score distribution
-            const scoreDistribution = {
-                'Perfect (9-10)': jobs.filter(j => j.score >= 9).length,
-                'Good (7-8)': jobs.filter(j => j.score >= 7 && j.score < 9).length,
-                'Partial (5-6)': jobs.filter(j => j.score >= 5 && j.score < 7).length,
-                'Reject (1-4)': jobs.filter(j => j.score >= 1 && j.score < 5).length,
-                'Filtered (0)': jobs.filter(j => j.score === 0 || j.score === null || j.score === undefined).length
-            };
+ const timer = setInterval(() => {
+ current += increment;
+ if (current >= target) {
+ current = target;
+ clearInterval(timer);
+ }
+ element.textContent = current.toFixed(1) + '%';
+ }, interval);
+ }
 
-            // Top companies with matches
-            const companyCounts = {};
-            matched.forEach(j => {
-                const company = j.company || 'Unknown';
-                companyCounts[company] = (companyCounts[company] || 0) + 1;
-            });
-            const topCompanies = Object.entries(companyCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 8);
+ function renderScoreChart(distribution) {
+ const ctx = document.getElementById('scoreChart').getContext('2d');
 
-            // Top matches (highest scores)
-            const topMatches = matched
-                .sort((a, b) => (b.score || 0) - (a.score || 0))
-                .slice(0, 6);
+ if (scoreChart) {
+ scoreChart.destroy();
+ }
 
-            return {
-                total: jobs.length,
-                matched: matched.length,
-                rejected: rejected.length,
-                matchRate: jobs.length > 0 ? (matched.length / jobs.length * 100) : 0,
-                scoreDistribution,
-                topCompanies,
-                topMatches,
-                quickFiltered: jobs.filter(j => j.score === 0 || j.score === null).length,
-                aiRejected: jobs.filter(j => j.score > 0 && j.score < 7).length
-            };
-        }
+ const labels = Object.keys(distribution).filter(k => distribution[k] > 0);
+ const data = labels.map(k => distribution[k]);
+ const colors = {
+ 'Perfect (9-10)': '#238636',
+ 'Good (7-8)': '#3fb950',
+ 'Partial (5-6)': '#d29922',
+ 'Reject (1-4)': '#f85149',
+ 'Filtered (0)': '#6e7681'
+ };
 
-        function animateCounter(elementId, target) {
-            const element = document.getElementById(elementId);
-            const duration = 1500;
-            const steps = 60;
-            const increment = target / steps;
-            let current = 0;
-            const interval = duration / steps;
+ scoreChart = new Chart(ctx, {
+ type: 'doughnut',
+ data: {
+ labels: labels,
+ datasets: [{
+ data: data,
+ backgroundColor: labels.map(l => colors[l]),
+ borderColor: '#21262d',
+ borderWidth: 2
+ }]
+ },
+ options: {
+ responsive: true,
+ maintainAspectRatio: false,
+ plugins: {
+ legend: {
+ position: 'right',
+ labels: {
+ color: '#f0f6fc',
+ padding: 15,
+ font: { size: 12 }
+ }
+ }
+ },
+ cutout: '60%'
+ }
+ });
+ }
 
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    current = target;
-                    clearInterval(timer);
-                }
-                element.textContent = Math.round(current).toLocaleString();
-            }, interval);
-        }
+ function renderPipelineChart(stats) {
+ const ctx = document.getElementById('pipelineChart').getContext('2d');
 
-        function animateCounterPercent(elementId, target) {
-            const element = document.getElementById(elementId);
-            const duration = 1500;
-            const steps = 60;
-            const increment = target / steps;
-            let current = 0;
-            const interval = duration / steps;
+ if (pipelineChart) {
+ pipelineChart.destroy();
+ }
 
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    current = target;
-                    clearInterval(timer);
-                }
-                element.textContent = current.toFixed(1) + '%';
-            }, interval);
-        }
+ pipelineChart = new Chart(ctx, {
+ type: 'bar',
+ data: {
+ labels: ['Quick Filtered', 'AI Rejected', 'Matched'],
+ datasets: [{
+ data: [stats.quickFiltered, stats.aiRejected, stats.matched],
+ backgroundColor: ['#6e7681', '#f85149', '#3fb950'],
+ borderRadius: 8,
+ borderSkipped: false
+ }]
+ },
+ options: {
+ indexAxis: 'y',
+ responsive: true,
+ maintainAspectRatio: false,
+ plugins: {
+ legend: { display: false }
+ },
+ scales: {
+ x: {
+ grid: { color: '#30363d' },
+ ticks: { color: '#8b949e' }
+ },
+ y: {
+ grid: { display: false },
+ ticks: {
+ color: '#f0f6fc',
+ font: { size: 13 }
+ }
+ }
+ }
+ }
+ });
+ }
 
-        function renderScoreChart(distribution) {
-            const ctx = document.getElementById('scoreChart').getContext('2d');
+ function renderTopMatches(matches) {
+ const grid = document.getElementById('matchesGrid');
+ grid.innerHTML = '';
 
-            if (scoreChart) {
-                scoreChart.destroy();
-            }
+ if (matches.length === 0) {
+ grid.innerHTML = '<p style="color: var(--text-secondary); text-align: center; grid-column: 1/-1;">No matched jobs found</p>';
+ return;
+ }
 
-            const labels = Object.keys(distribution).filter(k => distribution[k] > 0);
-            const data = labels.map(k => distribution[k]);
-            const colors = {
-                'Perfect (9-10)': '#238636',
-                'Good (7-8)': '#3fb950',
-                'Partial (5-6)': '#d29922',
-                'Reject (1-4)': '#f85149',
-                'Filtered (0)': '#6e7681'
-            };
+ matches.forEach((job, index) => {
+ const card = document.createElement('div');
+ card.className = `job-card animate-in animate-delay-${Math.min(index + 1, 4)}`;
 
-            scoreChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: labels.map(l => colors[l]),
-                        borderColor: '#21262d',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                color: '#f0f6fc',
-                                padding: 15,
-                                font: { size: 12 }
-                            }
-                        }
-                    },
-                    cutout: '60%'
-                }
-            });
-        }
+ const scoreClass = job.score >= 9 ? 'high' : 'medium';
+ const reason = job.reason || job.analysis || 'Great match for your profile';
 
-        function renderPipelineChart(stats) {
-            const ctx = document.getElementById('pipelineChart').getContext('2d');
+ card.innerHTML = `
+ <div class="job-card-header"> <div class="score-badge ${scoreClass}"> ${job.score || 0}</div> <div class="job-title">${escapeHtml(job.title || 'Unknown Title')}</div> </div> <div class="job-meta"> <span class="company">${escapeHtml(job.company || 'Unknown')}</span> · ${escapeHtml(job.location || 'Location N/A')}
+ </div> <div class="job-reason">${escapeHtml(reason)}</div> ${job.url ? `<a href="${escapeHtml(job.url)}" target="_blank" rel="noopener" class="btn">Apply →</a>` : ''}
+ `;
 
-            if (pipelineChart) {
-                pipelineChart.destroy();
-            }
+ grid.appendChild(card);
+ });
+ }
 
-            pipelineChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Quick Filtered', 'AI Rejected', 'Matched'],
-                    datasets: [{
-                        data: [stats.quickFiltered, stats.aiRejected, stats.matched],
-                        backgroundColor: ['#6e7681', '#f85149', '#3fb950'],
-                        borderRadius: 8,
-                        borderSkipped: false
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: '#30363d' },
-                            ticks: { color: '#8b949e' }
-                        },
-                        y: {
-                            grid: { display: false },
-                            ticks: {
-                                color: '#f0f6fc',
-                                font: { size: 13 }
-                            }
-                        }
-                    }
-                }
-            });
-        }
+ function renderLeaderboard(companies) {
+ const list = document.getElementById('leaderboardList');
+ list.innerHTML = '';
 
-        function renderTopMatches(matches) {
-            const grid = document.getElementById('matchesGrid');
-            grid.innerHTML = '';
+ if (companies.length === 0) {
+ list.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">No companies with matches</p>';
+ return;
+ }
 
-            if (matches.length === 0) {
-                grid.innerHTML = '<p style="color: var(--text-secondary); text-align: center; grid-column: 1/-1;">No matched jobs found</p>';
-                return;
-            }
+ const maxCount = companies[0][1];
 
-            matches.forEach((job, index) => {
-                const card = document.createElement('div');
-                card.className = `job-card animate-in animate-delay-${Math.min(index + 1, 4)}`;
+ companies.forEach(([company, count], index) => {
+ const item = document.createElement('div');
+ item.className = 'leaderboard-item';
+ const barWidth = (count / maxCount) * 100;
 
-                const scoreClass = job.score >= 9 ? 'high' : 'medium';
-                const reason = job.reason || job.analysis || 'Great match for your profile';
+ item.innerHTML = `
+ <div class="leaderboard-rank">${index + 1}</div> <div class="leaderboard-company">${escapeHtml(company)}</div> <div class="leaderboard-bar-container"> <div class="leaderboard-bar" style="width: 0%;" data-width="${barWidth}"></div> </div> <div class="leaderboard-count">${count}</div> `;
 
-                card.innerHTML = `
-                    <div class="job-card-header">
-                        <div class="score-badge ${scoreClass}">★ ${job.score || 0}</div>
-                        <div class="job-title">${escapeHtml(job.title || 'Unknown Title')}</div>
-                    </div>
-                    <div class="job-meta">
-                        <span class="company">${escapeHtml(job.company || 'Unknown')}</span> · ${escapeHtml(job.location || 'Location N/A')}
-                    </div>
-                    <div class="job-reason">${escapeHtml(reason)}</div>
-                    ${job.url ? `<a href="${escapeHtml(job.url)}" target="_blank" rel="noopener" class="btn">Apply →</a>` : ''}
-                `;
+ list.appendChild(item);
 
-                grid.appendChild(card);
-            });
-        }
+ // Animate bar after a delay
+ setTimeout(() => {
+ item.querySelector('.leaderboard-bar').style.width = `${barWidth}%`;
+ }, 100 + index * 100);
+ });
+ }
 
-        function renderLeaderboard(companies) {
-            const list = document.getElementById('leaderboardList');
-            list.innerHTML = '';
-
-            if (companies.length === 0) {
-                list.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">No companies with matches</p>';
-                return;
-            }
-
-            const maxCount = companies[0][1];
-
-            companies.forEach(([company, count], index) => {
-                const item = document.createElement('div');
-                item.className = 'leaderboard-item';
-                const barWidth = (count / maxCount) * 100;
-
-                item.innerHTML = `
-                    <div class="leaderboard-rank">${index + 1}</div>
-                    <div class="leaderboard-company">${escapeHtml(company)}</div>
-                    <div class="leaderboard-bar-container">
-                        <div class="leaderboard-bar" style="width: 0%;" data-width="${barWidth}"></div>
-                    </div>
-                    <div class="leaderboard-count">${count}</div>
-                `;
-
-                list.appendChild(item);
-
-                // Animate bar after a delay
-                setTimeout(() => {
-                    item.querySelector('.leaderboard-bar').style.width = `${barWidth}%`;
-                }, 100 + index * 100);
-            });
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-    </script>
+ function escapeHtml(text) {
+ if (!text) return '';
+ const div = document.createElement('div');
+ div.textContent = text;
+ return div.innerHTML;
+ }
+ </script>
 </body>
 </html>

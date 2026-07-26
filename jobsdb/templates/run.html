@@ -4,164 +4,80 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Run Center</title>
-<style>
-  :root{--bg:#0e1219;--panel:#161c26;--panel2:#1b2330;--ink:#e8ecf3;--soft:#9aa5b6;
-    --line:#26303e;--accent:#e6953f;--teal:#4fb3bf;--new:#3ecf8e;--chip:#1d2530}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
-  a{text-decoration:none}
-  .topnav{display:flex;align-items:center;gap:4px;padding:12px 24px;border-bottom:1px solid var(--line);
-    border-top:3px solid var(--accent);background:var(--panel);position:sticky;top:0;z-index:10}
-  .topnav .brand{font-weight:700;font-size:16px;color:var(--ink);margin-right:18px}
-  .topnav a.link{color:var(--soft);padding:7px 13px;border-radius:8px;font-size:13.5px}
-  .topnav a.link:hover{color:var(--ink);background:var(--panel2)}
-  .topnav a.link.active{color:var(--teal);background:var(--panel2)}
-  .wrap{max-width:980px;margin:0 auto;padding:26px 24px 60px}
-  h1{font-size:24px;margin:0 0 4px}
-  .lead{color:var(--soft);margin:0 0 20px}
-  .runbar{position:sticky;top:56px;background:var(--panel);border:1px solid var(--line);
-    border-radius:12px;padding:12px 16px;margin-bottom:22px;z-index:5}
-  .runbar .top{display:flex;align-items:center;gap:12px}
-  .runbar .st{font-size:13px;color:var(--soft);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .runbar .st b{color:var(--ink)}
-  .bar{height:9px;background:var(--chip);border-radius:6px;overflow:hidden;margin-top:9px;display:none}
-  .bar i{display:block;height:100%;width:0;background:var(--teal);transition:width .3s}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
-  .card.hero-card{border-top:3px solid var(--accent)}
-  .card h3{margin:0 0 3px;font-size:17px;display:flex;align-items:center;gap:8px}
-  .card .desc{color:var(--soft);font-size:13.5px;margin:0 0 14px}
-  .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-  .fields label{font-size:12px;color:var(--soft);display:flex;flex-direction:column;gap:4px}
-  .fields input,.fields select{background:var(--chip);border:1px solid var(--line);color:var(--ink);
-    padding:8px 9px;border-radius:8px;font-size:13.5px}
-  .cmd{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:#bcd;background:#0b0f16;
-    border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:12px;overflow-x:auto;white-space:pre}
-  .btnrow{display:flex;gap:8px;align-items:center}
-  button{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:9px 15px;
-    border-radius:9px;cursor:pointer;font-size:13.5px}
-  button.run{background:var(--teal);color:#04202a;border-color:var(--teal);font-weight:600}
-  button.run.big{background:var(--accent);border-color:var(--accent);color:#2a1705}
-  button:disabled{opacity:.5;cursor:default}
-  button.copy{color:var(--soft)}
-  .note{color:var(--soft);font-size:12px;margin-top:14px}
+<style> :root{--bg:#0e1219;--panel:#161c26;--panel2:#1b2330;--ink:#e8ecf3;--soft:#9aa5b6;
+ --line:#26303e;--accent:#e6953f;--teal:#4fb3bf;--new:#3ecf8e;--chip:#1d2530}
+ *{box-sizing:border-box}
+ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+ a{text-decoration:none}
+ .topnav{display:flex;align-items:center;gap:4px;padding:12px 24px;border-bottom:1px solid var(--line);
+ border-top:3px solid var(--accent);background:var(--panel);position:sticky;top:0;z-index:10}
+ .topnav .brand{font-weight:700;font-size:16px;color:var(--ink);margin-right:18px}
+ .topnav a.link{color:var(--soft);padding:7px 13px;border-radius:8px;font-size:13.5px}
+ .topnav a.link:hover{color:var(--ink);background:var(--panel2)}
+ .topnav a.link.active{color:var(--teal);background:var(--panel2)}
+ .wrap{max-width:980px;margin:0 auto;padding:26px 24px 60px}
+ h1{font-size:24px;margin:0 0 4px}
+ .lead{color:var(--soft);margin:0 0 20px}
+ .runbar{position:sticky;top:56px;background:var(--panel);border:1px solid var(--line);
+ border-radius:12px;padding:12px 16px;margin-bottom:22px;z-index:5}
+ .runbar .top{display:flex;align-items:center;gap:12px}
+ .runbar .st{font-size:13px;color:var(--soft);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .runbar .st b{color:var(--ink)}
+ .bar{height:9px;background:var(--chip);border-radius:6px;overflow:hidden;margin-top:9px;display:none}
+ .bar i{display:block;height:100%;width:0;background:var(--teal);transition:width .3s}
+ .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+ .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+ .card.hero-card{border-top:3px solid var(--accent)}
+ .card h3{margin:0 0 3px;font-size:17px;display:flex;align-items:center;gap:8px}
+ .card .desc{color:var(--soft);font-size:13.5px;margin:0 0 14px}
+ .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+ .fields label{font-size:12px;color:var(--soft);display:flex;flex-direction:column;gap:4px}
+ .fields input,.fields select{background:var(--chip);border:1px solid var(--line);color:var(--ink);
+ padding:8px 9px;border-radius:8px;font-size:13.5px}
+ .cmd{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:#bcd;background:#0b0f16;
+ border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:12px;overflow-x:auto;white-space:pre}
+ .btnrow{display:flex;gap:8px;align-items:center}
+ button{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:9px 15px;
+ border-radius:9px;cursor:pointer;font-size:13.5px}
+ button.run{background:var(--teal);color:#04202a;border-color:var(--teal);font-weight:600}
+ button.run.big{background:var(--accent);border-color:var(--accent);color:#2a1705}
+ button:disabled{opacity:.5;cursor:default}
+ button.copy{color:var(--soft)}
+ .note{color:var(--soft);font-size:12px;margin-top:14px}
 </style>
 </head>
 <body>
-<nav class="topnav">
-  <a class="brand" href="/">✈️ Job Command Center</a>
-  <a class="link" href="/">Home</a>
-  <a class="link" href="/library">Library</a>
-  <a class="link active" href="/run">Run Center</a>
-  <a class="link" href="/dashboard?file=/api/analysis.json">Dashboard</a>
-  <a class="link" href="/builder">Command Builder</a>
+<nav class="topnav"> <a class="brand" href="/">Job Command Center</a> <a class="link" href="/">Home</a> <a class="link" href="/library">Library</a> <a class="link active" href="/run">Run Center</a> <a class="link" href="/dashboard?file=/api/analysis.json">Dashboard</a> <a class="link" href="/builder">Command Builder</a>
 </nav>
-<div class="wrap">
-  <h1>Run Center</h1>
-  <p class="lead">Run scrapers and AI analysis on this machine. Each card shows the exact
-     command it will execute, then runs it in the background with live progress.</p>
-
-  <div class="runbar">
-    <div class="top">
-      <div class="st" id="st">Idle — nothing running.</div>
-    </div>
-    <div class="bar" id="bar"><i id="barfill"></i></div>
-  </div>
-
-  <div class="cards">
-    <!-- FULL PIPELINE -->
-    <div class="card hero-card">
-      <h3>⚡ Full pipeline <span style="font-size:12px;color:var(--soft)">scrape → analyse → ingest</span></h3>
-      <p class="desc">One command: scrape every website, AI-score the results, and load
-         everything into the database.</p>
-      <div class="fields">
-        <label>Location<input id="p_loc" value="London"></label>
-        <label>Time range<select id="p_time"><option>24h</option><option selected>48h</option><option>7d</option></select></label>
-        <label>Workers<input id="p_work" type="number" value="4" min="1" max="16"></label>
-        <label>AI model<select id="p_model"><option value="haiku">Claude haiku</option><option value="sonnet">Claude sonnet</option><option value="opus">Claude opus</option></select></label>
-      </div>
-      <div class="cmd" id="p_cmd"></div>
-      <div class="btnrow">
-        <button class="run big" data-run="pipeline">▶ Run full pipeline</button>
-        <button class="copy" data-copy="p_cmd">⧉ Copy</button>
-      </div>
-    </div>
-
-    <!-- SCRAPE ALL -->
-    <div class="card">
-      <h3>🌐 Scrape all websites</h3>
-      <p class="desc">Runs the master scraper (LinkedIn, Workday, Playwright, HTML) then
-         ingests into the database.</p>
-      <div class="fields">
-        <label>Location<input id="s_loc" value="London"></label>
-        <label>Time range<select id="s_time"><option>24h</option><option selected>48h</option><option>7d</option></select></label>
-        <label>Workers<input id="s_work" type="number" value="4" min="1" max="16"></label>
-        <label>Scope<select id="s_scope"><option value="all">All sources</option><option value="linkedin">LinkedIn only</option><option value="workday">Workday only</option></select></label>
-      </div>
-      <div class="cmd" id="s_cmd"></div>
-      <div class="btnrow">
-        <button class="run" data-run="scrape">▶ Run scrapers</button>
-        <button class="copy" data-copy="s_cmd">⧉ Copy</button>
-      </div>
-    </div>
-
-    <!-- ANALYSE -->
-    <div class="card">
-      <h3>🤖 AI analysis</h3>
-      <p class="desc">Score the latest scraped jobs against your profile
-         (<code>data/cv.txt</code>) with Claude or Ollama.</p>
-      <div class="fields">
-        <label>Backend<select id="a_backend"><option value="claude">Claude</option><option value="ollama">Ollama</option></select></label>
-        <label>Model<select id="a_model"><option value="haiku">haiku</option><option value="sonnet">sonnet</option><option value="opus">opus</option></select></label>
-        <label>Min score<input id="a_min" type="number" value="7" min="1" max="10"></label>
-        <label>Limit<input id="a_limit" type="number" placeholder="all" min="1"></label>
-      </div>
-      <div class="cmd" id="a_cmd"></div>
-      <div class="btnrow">
-        <button class="run" data-run="analyze">▶ Run analysis</button>
-        <button class="copy" data-copy="a_cmd">⧉ Copy</button>
-      </div>
-    </div>
-
-    <!-- MONITOR -->
-    <div class="card" id="monitor">
-      <h3>🛰️ Competitor monitor</h3>
-      <p class="desc">Refresh the aerospace &amp; HAPS competitor feed and diff NEW / CLOSED
-         since the last run, then ingest.</p>
-      <div class="fields">
-        <label>LinkedIn<select id="m_ln"><option value="0">Include (full)</option><option value="1">Skip (fast)</option></select></label>
-      </div>
-      <div class="cmd" id="m_cmd"></div>
-      <div class="btnrow">
-        <button class="run" data-run="refresh">▶ Refresh &amp; monitor</button>
-        <button class="copy" data-copy="m_cmd">⧉ Copy</button>
-      </div>
-    </div>
-  </div>
-  <p class="note">Long tasks run in the background on this machine. Claude backend needs the
-     <code>claude</code> CLI; Ollama needs <code>ollama serve</code>. Only one task per type runs at a time.</p>
+<div class="wrap"> <h1>Run Center</h1> <p class="lead">Run scrapers and AI analysis on this machine. Each card shows the exact
+ command it will execute, then runs it in the background with live progress.</p> <div class="runbar"> <div class="top"> <div class="st" id="st">Idle — nothing running.</div> </div> <div class="bar" id="bar"><i id="barfill"></i></div> </div> <div class="cards"> <!-- FULL PIPELINE --> <div class="card hero-card"> <h3>Full pipeline <span style="font-size:12px;color:var(--soft)">scrape → analyse → ingest</span></h3> <p class="desc">One command: scrape every website, AI-score the results, and load
+ everything into the database.</p> <div class="fields"> <label>Location<input id="p_loc" value="London"></label> <label>Time range<select id="p_time"><option>24h</option><option selected>48h</option><option>7d</option></select></label> <label>Workers<input id="p_work" type="number" value="4" min="1" max="16"></label> <label>AI model<select id="p_model"><option value="haiku">Claude haiku</option><option value="sonnet">Claude sonnet</option><option value="opus">Claude opus</option></select></label> </div> <div class="cmd" id="p_cmd"></div> <div class="btnrow"> <button class="run big" data-run="pipeline">Run full pipeline</button> <button class="copy" data-copy="p_cmd">Copy</button> </div> </div> <!-- SCRAPE ALL --> <div class="card"> <h3>Scrape all websites</h3> <p class="desc">Runs the master scraper (LinkedIn, Workday, Playwright, HTML) then
+ ingests into the database.</p> <div class="fields"> <label>Location<input id="s_loc" value="London"></label> <label>Time range<select id="s_time"><option>24h</option><option selected>48h</option><option>7d</option></select></label> <label>Workers<input id="s_work" type="number" value="4" min="1" max="16"></label> <label>Scope<select id="s_scope"><option value="all">All sources</option><option value="linkedin">LinkedIn only</option><option value="workday">Workday only</option></select></label> </div> <div class="cmd" id="s_cmd"></div> <div class="btnrow"> <button class="run" data-run="scrape">Run scrapers</button> <button class="copy" data-copy="s_cmd">Copy</button> </div> </div> <!-- ANALYSE --> <div class="card"> <h3>AI analysis</h3> <p class="desc">Score the latest scraped jobs against your profile
+ (<code>data/cv.txt</code>) with Claude or Ollama.</p> <div class="fields"> <label>Backend<select id="a_backend"><option value="claude">Claude</option><option value="ollama">Ollama</option></select></label> <label>Model<select id="a_model"><option value="haiku">haiku</option><option value="sonnet">sonnet</option><option value="opus">opus</option></select></label> <label>Min score<input id="a_min" type="number" value="7" min="1" max="10"></label> <label>Limit<input id="a_limit" type="number" placeholder="all" min="1"></label> </div> <div class="cmd" id="a_cmd"></div> <div class="btnrow"> <button class="run" data-run="analyze">Run analysis</button> <button class="copy" data-copy="a_cmd">Copy</button> </div> </div> <!-- MONITOR --> <div class="card" id="monitor"> <h3>Competitor monitor</h3> <p class="desc">Refresh the aerospace &amp; HAPS competitor feed and diff NEW / CLOSED
+ since the last run, then ingest.</p> <div class="fields"> <label>LinkedIn<select id="m_ln"><option value="0">Include (full)</option><option value="1">Skip (fast)</option></select></label> </div> <div class="cmd" id="m_cmd"></div> <div class="btnrow"> <button class="run" data-run="refresh">Refresh &amp; monitor</button> <button class="copy" data-copy="m_cmd">Copy</button> </div> </div> </div> <p class="note">Long tasks run in the background on this machine. Claude backend needs the
+ <code>claude</code> CLI; Ollama needs <code>ollama serve</code>. Only one task per type runs at a time.</p>
 </div>
 <script>
 const $=s=>document.querySelector(s);
 function opts(kind){
-  if(kind==="pipeline") return {location:$("#p_loc").value,time_range:$("#p_time").value,
-    workers:+$("#p_work").value,backend:"claude",model:$("#p_model").value};
-  if(kind==="scrape") return {location:$("#s_loc").value,time_range:$("#s_time").value,
-    workers:+$("#s_work").value,scope:$("#s_scope").value};
-  if(kind==="analyze"){const o={backend:$("#a_backend").value,model:$("#a_model").value,
-    min_score:+$("#a_min").value}; if($("#a_limit").value)o.limit=+$("#a_limit").value; return o;}
-  if(kind==="refresh") return {no_linkedin:$("#m_ln").value==="1"};
-  return {};
+ if(kind==="pipeline") return {location:$("#p_loc").value,time_range:$("#p_time").value,
+ workers:+$("#p_work").value,backend:"claude",model:$("#p_model").value};
+ if(kind==="scrape") return {location:$("#s_loc").value,time_range:$("#s_time").value,
+ workers:+$("#s_work").value,scope:$("#s_scope").value};
+ if(kind==="analyze"){const o={backend:$("#a_backend").value,model:$("#a_model").value,
+ min_score:+$("#a_min").value}; if($("#a_limit").value)o.limit=+$("#a_limit").value; return o;}
+ if(kind==="refresh") return {no_linkedin:$("#m_ln").value==="1"};
+ return {};
 }
 function cmdText(kind){
-  const o=opts(kind);
-  if(kind==="pipeline") return `python run.py -l ${o.location} -t ${o.time_range} -w ${o.workers}  &&  python analyze.py -b claude -m ${o.model}  &&  python -m jobsdb.ingest`;
-  if(kind==="scrape"){let f=o.scope==="linkedin"?" --linkedin-only":o.scope==="workday"?" --workday-only":"";
-    return `python run.py -l ${o.location} -t ${o.time_range} -w ${o.workers}${f}  &&  python -m jobsdb.ingest`;}
-  if(kind==="analyze"){let l=o.limit?` -n ${o.limit}`:"";
-    return `python analyze.py -b ${o.backend} -m ${o.model} --min-score ${o.min_score}${l}`;}
-  if(kind==="refresh") return `python monitor_jobs.py${o.no_linkedin?" --no-linkedin":""}  &&  python -m jobsdb.ingest`;
-  return "";
+ const o=opts(kind);
+ if(kind==="pipeline") return `python run.py -l ${o.location} -t ${o.time_range} -w ${o.workers} && python analyze.py -b claude -m ${o.model} && python -m jobsdb.ingest`;
+ if(kind==="scrape"){let f=o.scope==="linkedin"?" --linkedin-only":o.scope==="workday"?" --workday-only":"";
+ return `python run.py -l ${o.location} -t ${o.time_range} -w ${o.workers}${f} && python -m jobsdb.ingest`;}
+ if(kind==="analyze"){let l=o.limit?` -n ${o.limit}`:"";
+ return `python analyze.py -b ${o.backend} -m ${o.model} --min-score ${o.min_score}${l}`;}
+ if(kind==="refresh") return `python monitor_jobs.py${o.no_linkedin?" --no-linkedin":""} && python -m jobsdb.ingest`;
+ return "";
 }
 const cmdEls={pipeline:"p_cmd",scrape:"s_cmd",analyze:"a_cmd",refresh:"m_cmd"};
 function refreshCmds(){for(const k in cmdEls) document.getElementById(cmdEls[k]).textContent=cmdText(k);}
@@ -170,27 +86,27 @@ refreshCmds();
 
 let poll=null, busy=false;
 function setBusy(b){busy=b; document.querySelectorAll("button.run").forEach(x=>x.disabled=b);
-  $("#bar").style.display=b?"block":"none";}
+ $("#bar").style.display=b?"block":"none";}
 async function run(kind){
-  if(busy)return;
-  setBusy(true); $("#st").innerHTML=`<b>starting</b> ${kind}…`;
-  const res=await fetch("/api/run/"+kind,{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(opts(kind))});
-  if(res.status===409){$("#st").textContent="already running — wait for it to finish"; setBusy(false); return;}
-  const t=await res.json();
-  clearInterval(poll);
-  poll=setInterval(async()=>{
-    const s=await(await fetch("/api/task/"+t.id)).json();
-    $("#barfill").style.width=(s.progress||0)+"%";
-    $("#st").innerHTML=`<b>${s.kind}</b> · ${s.status} · ${s.message||""}`;
-    if(s.status!=="running"){clearInterval(poll); setBusy(false);
-      $("#st").innerHTML=`<b>${s.kind}</b> — ${s.message}. <a href="/library" style="color:var(--teal)">View library ›</a>`;}
-  },1500);
+ if(busy)return;
+ setBusy(true); $("#st").innerHTML=`<b>starting</b> ${kind}…`;
+ const res=await fetch("/api/run/"+kind,{method:"POST",headers:{"Content-Type":"application/json"},
+ body:JSON.stringify(opts(kind))});
+ if(res.status===409){$("#st").textContent="already running — wait for it to finish"; setBusy(false); return;}
+ const t=await res.json();
+ clearInterval(poll);
+ poll=setInterval(async()=>{
+ const s=await(await fetch("/api/task/"+t.id)).json();
+ $("#barfill").style.width=(s.progress||0)+"%";
+ $("#st").innerHTML=`<b>${s.kind}</b> · ${s.status} · ${s.message||""}`;
+ if(s.status!=="running"){clearInterval(poll); setBusy(false);
+ $("#st").innerHTML=`<b>${s.kind}</b> — ${s.message}. <a href="/library" style="color:var(--teal)">View library ›</a>`;}
+ },1500);
 }
 document.querySelectorAll("button[data-run]").forEach(b=>b.onclick=()=>run(b.dataset.run));
 document.querySelectorAll("button[data-copy]").forEach(b=>b.onclick=()=>{
-  navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent);
-  b.textContent="✓ Copied"; setTimeout(()=>b.textContent="⧉ Copy",1200);});
+ navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent);
+ b.textContent=" Copied"; setTimeout(()=>b.textContent=" Copy",1200);});
 </script>
 </body>
 </html>
