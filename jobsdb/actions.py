@@ -6,6 +6,7 @@ match-filter, without leaving the page.
 Tasks run in a daemon thread; progress is tracked in an in-memory registry the
 Flask app polls via /api/task/<id>. One task of each kind at a time.
 """
+import re
 import sys
 import threading
 import subprocess
@@ -48,7 +49,8 @@ def start(kind, **kwargs):
         _running_kinds.add(kind)
     tid = _new_task(kind)
     fn = {"refresh": _run_refresh, "ai": _run_ai, "scrape": _run_scrape,
-          "analyze": _run_analyze, "pipeline": _run_pipeline}.get(kind)
+          "analyze": _run_analyze, "pipeline": _run_pipeline,
+          "adzuna": _run_adzuna}.get(kind)
     if not fn:
         _finish(tid, False, f"unknown task '{kind}'")
         _running_kinds.discard(kind)
@@ -136,6 +138,31 @@ def _run_pipeline(tid, location="London", time_range="48h", workers=4,
                    capture_output=True, text=True, timeout=1800)
     TASKS[tid]["progress"] = 100
     _finish(tid, True, "full pipeline complete")
+
+
+def _keywords(kw):
+    return [k.strip() for k in re.split(r"[;,]", kw or "") if k.strip()]
+
+
+# --- Adzuna: aggregator with structured salary, then ingest ------------------
+def _run_adzuna(tid, keywords="software engineer", country="gb",
+                location="", max_jobs=100):
+    py = sys.executable
+    kws = _keywords(keywords) or ["software engineer"]
+    ad = BASE_DIR / "scrapers" / "adzuna.py"
+    for i, kw in enumerate(kws):
+        TASKS[tid]["message"] = f"Adzuna: '{kw}' ({i+1}/{len(kws)})"
+        TASKS[tid]["progress"] = int(i * 85 / len(kws))
+        cmd = [py, str(ad), "-k", kw, "-c", country, "-n", str(max_jobs)]
+        if location:
+            cmd += ["-l", location]
+        subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True, timeout=900)
+    TASKS[tid]["message"] = "ingesting…"
+    TASKS[tid]["progress"] = 90
+    subprocess.run([py, "-m", "jobsdb.ingest"], cwd=str(BASE_DIR),
+                   capture_output=True, text=True, timeout=1800)
+    TASKS[tid]["progress"] = 100
+    _finish(tid, True, f"Adzuna harvest done for {len(kws)} keyword(s)")
 
 
 # --- AI filter: score jobs vs the target CV/profile ---------------------------

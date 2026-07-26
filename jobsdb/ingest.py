@@ -66,6 +66,8 @@ def clean(desc):
 INCLUDE_GLOBS = [
     "primes_*.json", "aalto_*.json", "aero_jd_*.json", "gap_*.json",
     "linkedin_aero_*.json", "linkedin_flightsw*.json", "master_jd*.json",
+    # broader keyword harvests + salary-rich providers
+    "linkedin_jobs*.json", "linkedin_kw_*.json", "adzuna_*.json",
 ]
 
 
@@ -96,12 +98,20 @@ def collect_rows():
             prev = rows.get(key)
             if prev and len(prev["description"]) >= len(desc):
                 continue  # keep the richer description
+            # Structured salary from the source (e.g. Adzuna), if provided.
+            structured_sal = None
+            if j.get("salary_min") is not None or j.get("salary_max") is not None:
+                structured_sal = {
+                    "min": j.get("salary_min"), "max": j.get("salary_max"),
+                    "currency": j.get("salary_currency") or "GBP",
+                    "period": j.get("salary_period") or "year",
+                }
             rows[key] = {
                 "job_key": key, "source": j.get("source", default_src),
                 "company": company, "title": title, "location": location,
                 "url": url, "description": desc,
                 "posted_date": j.get("posted_date", "") or "",
-                "raw": j,
+                "salary": structured_sal, "raw": j,
             }
     return rows
 
@@ -145,7 +155,8 @@ def main():
             # Everything we just ingested was seen in the data => open. The monitor
             # owns true CLOSED detection over time; harvest snapshots are all open.
             status = "open"
-            sal = parse_salary(r["description"]) or {}
+            # Prefer a source-provided salary; otherwise parse it from the text.
+            sal = r.get("salary") or parse_salary(r["description"]) or {}
             country = normalize_country(r["location"])
 
             stmt = pg_insert(jobs).values(
