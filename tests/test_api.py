@@ -102,6 +102,40 @@ def test_analysis_json_shape_and_decisions(client, seeded):
         assert (r["decision"] == "MATCHED") == (r["score"] >= 7)  # decision matches score
 
 
+def test_prefix_search_matches_partial_words(client):
+    # "engin" should match "engineer"; every result really contains eng*
+    d = rows(client, "q=engin")
+    assert d["total"] > 0
+    assert all("engineer" in (r["title"] + r["snippet"]).lower() or
+               "engineering" in (r["title"] + r["snippet"]).lower() for r in d["rows"])
+
+
+def test_has_salary_and_min_salary_filters(client, seeded):
+    d = rows(client, "has_salary=1")
+    assert d["total"] == seeded["expect"]["salaried"]
+    assert all(r["salary_max"] is not None for r in d["rows"])
+    # £70-90k and $120-150k both clear 60k
+    assert rows(client, "min_salary=60000")["total"] == seeded["expect"]["salaried"]
+    assert rows(client, "min_salary=200000")["total"] == 0
+
+
+def test_sort_by_salary_descending(client):
+    d = rows(client, "has_salary=1&sort=salary")
+    sal = [r["salary_max"] for r in d["rows"]]
+    assert sal == sorted(sal, reverse=True)
+
+
+def test_salaries_endpoint(client):
+    d = client.get("/api/salaries").get_json()
+    assert {c["currency"] for c in d["currencies"]} == {"GBP", "USD"}
+    assert d["currency"] in ("GBP", "USD")
+    assert all("median" in lv for lv in d["by_level"])
+
+
+def test_stats_reports_salaried(client, seeded):
+    assert client.get("/api/stats").get_json()["summary"]["salaried"] == seeded["expect"]["salaried"]
+
+
 def test_run_dispatch_validation(client):
     assert client.post("/api/run/bogus").status_code == 400
     assert client.get("/api/task/nope").status_code == 404

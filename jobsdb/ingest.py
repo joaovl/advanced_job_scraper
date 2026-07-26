@@ -27,6 +27,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from .db import get_engine, init_schema, jobs, metadata
+from .salary import parse_salary
 
 BASE_DIR = Path(__file__).parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
@@ -143,6 +144,7 @@ def main():
             # Everything we just ingested was seen in the data => open. The monitor
             # owns true CLOSED detection over time; harvest snapshots are all open.
             status = "open"
+            sal = parse_salary(r["description"]) or {}
 
             stmt = pg_insert(jobs).values(
                 job_key=key, source=r["source"], company=r["company"],
@@ -151,6 +153,8 @@ def main():
                 is_competitor=bool(comp), posted_date=r["posted_date"],
                 status=status, is_new=is_new, first_seen=first_seen, last_seen=now,
                 raw=r["raw"],
+                salary_min=sal.get("min"), salary_max=sal.get("max"),
+                salary_currency=sal.get("currency"), salary_period=sal.get("period"),
                 search=text("to_tsvector('english', :ft)").bindparams(
                     ft=f"{r['company']} {r['title']} {r['description']}"),
             ).on_conflict_do_update(
@@ -161,6 +165,9 @@ def main():
                     "description": r["description"], "competitor": comp,
                     "is_competitor": bool(comp), "status": status, "is_new": False,
                     "last_seen": now, "raw": r["raw"],
+                    "salary_min": sal.get("min"), "salary_max": sal.get("max"),
+                    "salary_currency": sal.get("currency"),
+                    "salary_period": sal.get("period"),
                     "search": text("to_tsvector('english', :ft)").bindparams(
                         ft=f"{r['company']} {r['title']} {r['description']}"),
                 },

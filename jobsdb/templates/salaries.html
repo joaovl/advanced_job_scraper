@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salaries</title>
+<style>
+  :root{--bg:#0e1219;--panel:#161c26;--panel2:#1b2330;--ink:#e8ecf3;--soft:#9aa5b6;
+    --line:#26303e;--accent:#e6953f;--teal:#4fb3bf;--new:#3ecf8e;--chip:#1d2530}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+  a{text-decoration:none}
+  .topnav{display:flex;align-items:center;gap:4px;padding:12px 24px;border-bottom:1px solid var(--line);
+    border-top:3px solid var(--accent);background:var(--panel);position:sticky;top:0;z-index:10}
+  .topnav .brand{font-weight:700;font-size:16px;color:var(--ink);margin-right:18px}
+  .topnav a.link{color:var(--soft);padding:7px 13px;border-radius:8px;font-size:13.5px}
+  .topnav a.link:hover{color:var(--ink);background:var(--panel2)}
+  .topnav a.link.active{color:var(--teal);background:var(--panel2)}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px}
+  h1{font-size:24px;margin:0 0 4px}
+  .lead{color:var(--soft);margin:0 0 18px}
+  .controls{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+  input,select{background:var(--chip);border:1px solid var(--line);color:var(--ink);
+    padding:8px 11px;border-radius:8px;font-size:13.5px}
+  .cur{display:flex;gap:6px}
+  .cur button{background:var(--chip);border:1px solid var(--line);color:var(--soft);
+    padding:7px 13px;border-radius:8px;cursor:pointer}
+  .cur button.on{background:var(--teal);color:#04202a;border-color:var(--teal);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  .panel h3{margin:0 0 14px;font-size:15px;color:var(--soft);text-transform:uppercase;letter-spacing:.05em}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-size:14px}
+  th{color:var(--soft);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .barrow{display:grid;grid-template-columns:120px 1fr 90px;gap:12px;align-items:center;margin:9px 0}
+  .barrow .lbl{font-size:14px}
+  .track{background:var(--chip);border-radius:6px;height:22px;position:relative;overflow:hidden}
+  .fill{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,#2c6b74,var(--teal));border-radius:6px}
+  .barrow .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--teal);font-weight:600}
+  .muted{color:var(--soft);font-size:13px}
+  .big{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="brand" href="/">Job Command Center</a>
+  <a class="link" href="/">Home</a>
+  <a class="link" href="/library">Library</a>
+  <a class="link" href="/run">Run Center</a>
+  <a class="link active" href="/salaries">Salaries</a>
+  <a class="link" href="/dashboard?file=/api/analysis.json">Dashboard</a>
+  <a class="link" href="/builder">Command Builder</a>
+</nav>
+<div class="wrap">
+  <h1>Salary research</h1>
+  <p class="lead">Pay ranges parsed from job descriptions. Filter by role to see what
+     the market pays, by seniority and by employer.</p>
+
+  <div class="controls">
+    <input id="q" type="search" placeholder="Filter by role, e.g. principal software engineer" style="flex:1;min-width:240px">
+    <label class="muted"><input type="checkbox" id="comp"> competitors only</label>
+    <div class="cur" id="cur"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Overview</h3>
+    <div id="overview" class="muted">Loading…</div>
+  </div>
+  <div class="panel">
+    <h3>By seniority (median)</h3>
+    <div id="levels"></div>
+  </div>
+  <div class="panel">
+    <h3>By employer (median, top 15)</h3>
+    <table><thead><tr><th>Company</th><th class="num">Jobs</th><th class="num">Median</th></tr></thead>
+      <tbody id="companies"></tbody></table>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const state={q:"",comp:false,currency:""};
+const SYM={GBP:"£",USD:"$",EUR:"€"};
+function fmt(cur,n){ if(n==null) return "–"; return (SYM[cur]||"")+Math.round(n).toLocaleString(); }
+function qs(){ const p=new URLSearchParams(); if(state.q)p.set("q",state.q);
+  if(state.comp)p.set("competitor","1"); if(state.currency)p.set("currency",state.currency); return p.toString(); }
+
+async function load(){
+  const d=await (await fetch("/api/salaries?"+qs())).json();
+  state.currency=d.currency;
+  // currency switch
+  $("#cur").innerHTML=d.currencies.map(c=>
+    `<button class="${c.currency===d.currency?'on':''}" data-cur="${c.currency}">${c.currency} (${c.n})</button>`).join("")
+    || '<span class="muted">no salary data</span>';
+  document.querySelectorAll("#cur button").forEach(b=>b.onclick=()=>{state.currency=b.dataset.cur;load();});
+  // overview
+  const cc=d.currencies.find(c=>c.currency===d.currency);
+  $("#overview").innerHTML = cc
+    ? `<span class="big">${fmt(d.currency,cc.median)}</span> median · range ${fmt(d.currency,cc.lo)}–${fmt(d.currency,cc.hi)} · <span class="muted">${cc.n} jobs with a published range</span>`
+    : "No salary data for this filter.";
+  // levels bar chart
+  const max=Math.max(1,...d.by_level.map(l=>l.median||0));
+  $("#levels").innerHTML=d.by_level.map(l=>`
+    <div class="barrow"><div class="lbl">${l.level} <span class="muted">(${l.n})</span></div>
+      <div class="track"><div class="fill" style="width:${Math.round(100*(l.median||0)/max)}%"></div></div>
+      <div class="val">${fmt(d.currency,l.median)}</div></div>
+    <div class="muted" style="margin:-4px 0 10px 132px">p25 ${fmt(d.currency,l.p25)} · p75 ${fmt(d.currency,l.p75)}</div>`).join("")
+    || '<div class="muted">–</div>';
+  // companies
+  $("#companies").innerHTML=d.by_company.map(c=>
+    `<tr><td>${c.company}</td><td class="num">${c.n}</td><td class="num">${fmt(d.currency,c.median)}</td></tr>`).join("")
+    || '<tr><td colspan="3" class="muted">–</td></tr>';
+}
+let t; $("#q").oninput=e=>{clearTimeout(t);state.q=e.target.value;state.currency="";t=setTimeout(load,250);};
+$("#comp").onchange=e=>{state.comp=e.target.checked;state.currency="";load();};
+load();
+</script>
+</body>
+</html>

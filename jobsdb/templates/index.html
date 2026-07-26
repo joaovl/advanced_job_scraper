@@ -50,6 +50,7 @@
  .badge.src{background:var(--chipbg);color:var(--soft);border:1px solid var(--line);font-weight:500;text-transform:none}
  .co-name{color:var(--teal);font-size:12.5px}
  .badge.score{background:#2a3550;color:#cfe0ff}
+ .badge.pay{background:#20372a;color:#8fe0b0;text-transform:none;font-weight:600}
  .badge.score.hi{background:var(--new);color:#052a17}
  .badge.score.mid{background:var(--warn);color:#2a1705}
  .badge.score.lo{background:#4a2530;color:#ffbcbc}
@@ -75,15 +76,15 @@
 </style>
 </head>
 <body>
-<header> <h1> Job Library <span class="sub">aviation · aerospace · competitor watch</span></h1> <nav style="display:flex;gap:6px;margin-left:6px"> <a href="/" style="color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px">Home</a> <a href="/library" style="color:var(--teal);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px;background:#1b2330">Library</a> <a href="/run" style="color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px">Run Center</a> <a href="/dashboard?file=/api/analysis.json" style="color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px">Dashboard</a> <a href="/builder" style="color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px">Builder</a> </nav> <div class="stats" id="stats"></div>
+<header> <h1> Job Library <span class="sub">aviation · aerospace · competitor watch</span></h1> <nav style="display:flex;gap:6px;margin-left:6px"> <a href="/" style="color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px">Home</a> <a href="/library" style="color:var(--teal);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px;background:#1b2330">Library</a> <a href="/run" style="color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px">Run Center</a> <a href="/salaries" style="color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px">Salaries</a> <a href="/dashboard?file=/api/analysis.json" style="color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px">Dashboard</a> <a href="/builder" style="color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px">Builder</a> </nav> <div class="stats" id="stats"></div>
 </header>
 <div class="actions"> <button class="btn" id="btn-refresh">Refresh jobs</button> <button class="btn" id="btn-ai">AI score</button> <select id="ai-backend" title="AI backend"> <option value="claude">Claude (haiku)</option> <option value="ollama">Ollama (local)</option> </select> <label style="font-size:12px;color:var(--soft)"><input type="checkbox" id="ai-comp"> competitors only</label> <div class="prog" id="prog"><i id="progbar"></i></div> <span class="pmsg" id="pmsg"></span>
 </div>
-<div class="layout"> <aside> <h3>Companies</h3> <div id="companies"></div> </aside> <main> <div class="controls"> <input id="q" type="search" placeholder="Search title, company, description…"> <span class="chip comp" data-f="competitor">Competitors</span> <span class="chip new" data-f="new">New</span> <span class="chip" data-f="scored">Scored</span> <select id="minscore" title="Minimum AI score"> <option value="">Any score</option> <option value="9">≥ 9</option><option value="8">≥ 8</option> <option value="7">≥ 7</option><option value="6">≥ 6</option> </select> <span class="chip" id="sortscore">Sort by score</span> <button class="exp" id="export">Export CSV</button> </div> <div class="count" id="count"></div> <div id="results"><div class="loading">Loading…</div></div> </main>
+<div class="layout"> <aside> <h3>Companies</h3> <div id="companies"></div> </aside> <main> <div class="controls"> <input id="q" type="search" placeholder="Search title, company, description…"> <span class="chip comp" data-f="competitor">Competitors</span> <span class="chip new" data-f="new">New</span> <span class="chip" data-f="scored">Scored</span> <select id="minscore" title="Minimum AI score"> <option value="">Any score</option> <option value="9">≥ 9</option><option value="8">≥ 8</option> <option value="7">≥ 7</option><option value="6">≥ 6</option> </select> <span class="chip" id="sortscore">Sort by score</span> <span class="chip" id="sortpay">Sort by pay</span> <label class="chip" style="cursor:default"><input type="checkbox" id="haspay" style="margin-right:5px">Has pay</label> <button class="exp" id="export">Export CSV</button> </div> <div class="count" id="count"></div> <div id="results"><div class="loading">Loading…</div></div> </main>
 </div>
 <script>
 const state = {q:"", company:"", competitor:false, new:false, scored:false,
- min_score:"", sort:"", status:"open"};
+ has_pay:false, min_score:"", sort:"", status:"open"};
 const $ = s => document.querySelector(s);
 
 function qs(){
@@ -93,6 +94,7 @@ function qs(){
  if(state.competitor) p.set("competitor","1");
  if(state.new) p.set("new","1");
  if(state.scored) p.set("scored","1");
+ if(state.has_pay) p.set("has_salary","1");
  if(state.min_score) p.set("min_score", state.min_score);
  if(state.sort) p.set("sort", state.sort);
  p.set("status", state.status);
@@ -129,7 +131,7 @@ async function load(){
  <div class="job" data-id="${r.id}"> <div class="row"> ${scoreBadge(r.ai_score, r.ai_match)}
  ${r.is_new?'<span class="badge new">new</span>':''}
  ${r.is_competitor?'<span class="badge comp">RIVAL</span>':''}
- <span class="badge src">${r.source}</span> <div> <div class="t">${esc(r.title)}</div> <div class="co-name">${esc(r.company)}${r.competitor?' — '+esc(r.competitor):''}</div> </div> <span class="meta">${esc(r.location)} · ${r.desc_len} chars</span> </div> <div class="desc" id="d${r.id}"></div> </div>`).join("");
+ <span class="badge src">${r.source}</span> ${payBadge(r)} <div> <div class="t">${esc(r.title)}</div> <div class="co-name">${esc(r.company)}${r.competitor?' — '+esc(r.competitor):''}</div> </div> <span class="meta">${esc(r.location)} · ${r.desc_len} chars</span> </div> <div class="desc" id="d${r.id}"></div> </div>`).join("");
  document.querySelectorAll(".job .row").forEach(row=>row.onclick=()=>toggle(row.parentElement));
 }
 
@@ -150,6 +152,16 @@ function scoreBadge(sc, match){
  if(sc===null||sc===undefined) return '';
  const cls = sc>=8?'hi':sc>=6?'mid':'lo';
  return `<span class="badge score ${cls}" title="AI match score">${match?'':''}${sc}/10</span>`;
+}
+const SYM={GBP:"£",USD:"$",EUR:"€"};
+function money(cur,n){ const s=SYM[cur]||''; return n>=1000?s+Math.round(n/1000)+'k':s+n; }
+function payBadge(r){
+ if(r.salary_max==null && r.salary_min==null) return '';
+ const cur=r.salary_currency||'', per=r.salary_period==='hour'?'/hr':'';
+ let txt = (r.salary_min && r.salary_max && r.salary_min!==r.salary_max)
+   ? money(cur,r.salary_min)+'–'+money(cur,r.salary_max)
+   : money(cur, r.salary_max||r.salary_min);
+ return `<span class="badge pay" title="Published salary">${txt}${per}</span>`;
 }
 
 // --- Task runner (Refresh / AI score) with progress polling ---
@@ -190,8 +202,12 @@ document.querySelectorAll(".chip[data-f]").forEach(ch=>ch.onclick=()=>{
 });
 $("#export").onclick = ()=>{ window.location = "/api/export.csv?"+qs(); };
 $("#minscore").onchange = e=>{ state.min_score = e.target.value; load(); };
-$("#sortscore").onclick = ()=>{ state.sort = state.sort==="score"?"":"score";
- $("#sortscore").classList.toggle("on", state.sort==="score"); load(); };
+function setSort(s){ state.sort = state.sort===s ? "" : s;
+ $("#sortscore").classList.toggle("on", state.sort==="score");
+ $("#sortpay").classList.toggle("on", state.sort==="salary"); load(); }
+$("#sortscore").onclick = ()=> setSort("score");
+$("#sortpay").onclick = ()=> setSort("salary");
+$("#haspay").onchange = e=>{ state.has_pay = e.target.checked; load(); };
 
 loadStats(); load();
 </script>

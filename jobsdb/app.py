@@ -51,15 +51,34 @@ def expand_query(q):
     return " ".join(out)
 
 
+def build_tsquery(q):
+    """Expanded, prefix-matching tsquery: 'engin sw' -> 'engin:* & software:*'.
+
+    Prefix (:*) makes partial words match as you type; each word is required (&)
+    but order and case don't matter. Returns None if there's nothing usable.
+    """
+    toks = []
+    for raw in re.split(r"\s+", expand_query(q)):
+        t = re.sub(r"[^a-z0-9]", "", raw)
+        if t:
+            toks.append(f"{t}:*")
+    return " & ".join(toks) if toks else None
+
+
 def _where(args):
     """Build a WHERE clause + params from query args."""
     clauses, params = [], {}
     q = (args.get("q") or "").strip()
-    if q:
-        # AND of the (expanded) concept words, stemmed by the English config, so
-        # word order and abbreviations don't matter and plurals/tense are ignored.
-        clauses.append("search @@ plainto_tsquery('english', :q)")
-        params["q"] = expand_query(q)
+    tsq = build_tsquery(q) if q else None
+    if tsq:
+        # Prefix, order-independent, abbreviation-expanded, stemmed match.
+        clauses.append("search @@ to_tsquery('english', :q)")
+        params["q"] = tsq
+    if args.get("min_salary"):
+        clauses.append("salary_max >= :min_salary")
+        params["min_salary"] = int(args["min_salary"])
+    if args.get("has_salary") == "1":
+        clauses.append("salary_max IS NOT NULL")
     if args.get("source"):
         clauses.append("source = :source")
         params["source"] = args["source"]
@@ -96,6 +115,11 @@ def library():
 @app.route("/run")
 def run_center():
     return render_template("run.html")
+
+
+@app.route("/salaries")
+def salaries():
+    return render_template("salaries.html")
 
 
 @app.route("/dashboard")
@@ -135,6 +159,7 @@ def stats():
             "count(*) FILTER (WHERE is_new) new, "
             "count(*) FILTER (WHERE ai_score IS NOT NULL) scored, "
             "count(*) FILTER (WHERE ai_match) matched, "
+            "count(*) FILTER (WHERE salary_max IS NOT NULL) salaried, "
             "count(*) FILTER (WHERE status='open') open, "
             "count(DISTINCT company) companies FROM jobs")).mappings().first()
         companies = c.execute(text(
@@ -142,6 +167,43 @@ def stats():
             "FROM jobs WHERE status='open' GROUP BY company ORDER BY n DESC")).mappings().all()
     return jsonify({"summary": dict(row),
                     "companies": [dict(x) for x in companies]})
+
+
+@app.route("/api/salaries")
+def api_salaries():
+    """Salary aggregates for price research: distribution by currency, by
+    seniority level, and by company. Honours the same filters as the job list."""
+    where, params = _where(request.args)
+    cond = " FROM jobs " + where + (" AND " if where else " WHERE ") + "salary_max IS NOT NULL"
+    mid = "COALESCE((salary_min + salary_max)/2.0, salary_max, salary_min)"
+    level = ("CASE WHEN title ~* 'principal|staff' THEN 'Principal' "
+             "WHEN title ~* 'lead|head' THEN 'Lead' "
+             "WHEN title ~* 'senior|snr|sr ' THEN 'Senior' "
+             "ELSE 'Mid / other' END")
+    with engine.connect() as c:
+        currencies = c.execute(text(
+            f"SELECT salary_currency currency, count(*) n, "
+            f"round(percentile_cont(0.5) WITHIN GROUP (ORDER BY {mid})) median, "
+            f"min(salary_min) lo, max(salary_max) hi {cond} "
+            "GROUP BY salary_currency ORDER BY n DESC"), params).mappings().all()
+        cur = request.args.get("currency") or (currencies[0]["currency"] if currencies else "GBP")
+        p = dict(params, cur=cur)
+        by_level = c.execute(text(
+            f"SELECT {level} level, count(*) n, "
+            f"round(percentile_cont(0.5) WITHIN GROUP (ORDER BY {mid})) median, "
+            f"round(percentile_cont(0.25) WITHIN GROUP (ORDER BY {mid})) p25, "
+            f"round(percentile_cont(0.75) WITHIN GROUP (ORDER BY {mid})) p75 "
+            f"{cond} AND salary_currency = :cur GROUP BY level "
+            "ORDER BY median DESC NULLS LAST"), p).mappings().all()
+        by_company = c.execute(text(
+            f"SELECT company, count(*) n, "
+            f"round(percentile_cont(0.5) WITHIN GROUP (ORDER BY {mid})) median "
+            f"{cond} AND salary_currency = :cur GROUP BY company "
+            "HAVING count(*) >= 1 ORDER BY median DESC NULLS LAST LIMIT 15"), p).mappings().all()
+    return jsonify({"currency": cur,
+                    "currencies": [dict(x) for x in currencies],
+                    "by_level": [dict(x) for x in by_level],
+                    "by_company": [dict(x) for x in by_company]})
 
 
 @app.route("/api/jobs")
@@ -152,14 +214,17 @@ def api_jobs():
     order = request.args.get("sort")
     if order == "score":
         order_sql = "ai_score DESC NULLS LAST, is_competitor DESC"
+    elif order == "salary":
+        order_sql = "salary_max DESC NULLS LAST"
     elif params.get("q"):
         # Best text matches first when searching.
-        order_sql = "ts_rank(search, plainto_tsquery('english', :q)) DESC, is_new DESC"
+        order_sql = "ts_rank(search, to_tsquery('english', :q)) DESC, is_new DESC"
     else:
         order_sql = "is_new DESC, is_competitor DESC, company, title"
     sql = (
         "SELECT id, source, company, title, location, url, competitor, "
         "is_competitor, is_new, status, first_seen, ai_score, ai_match, "
+        "salary_min, salary_max, salary_currency, salary_period, "
         "left(description, 320) AS snippet, length(description) AS desc_len "
         f"FROM jobs {where} "
         f"ORDER BY {order_sql} "

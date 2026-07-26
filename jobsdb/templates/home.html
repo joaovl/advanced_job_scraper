@@ -4,70 +4,124 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Job Command Center</title>
-<style> :root{
- --bg:#0e1219; --panel:#161c26; --panel2:#1b2330; --ink:#e8ecf3; --soft:#9aa5b6;
- --line:#26303e; --accent:#e6953f; --teal:#4fb3bf; --new:#3ecf8e;
- }
- *{box-sizing:border-box}
- body{margin:0;background:
- radial-gradient(1200px 500px at 80% -10%, #16202e 0%, transparent 60%),
- var(--bg);color:var(--ink);
- font:15px/1.6 "Segoe UI",system-ui,sans-serif;min-height:100vh}
- a{text-decoration:none}
- .topnav{display:flex;align-items:center;gap:4px;padding:12px 24px;
- border-bottom:1px solid var(--line);border-top:3px solid var(--accent);
- background:var(--panel);position:sticky;top:0;z-index:10}
- .topnav .brand{font-weight:700;font-size:16px;color:var(--ink);margin-right:18px}
- .topnav a.link{color:var(--soft);padding:7px 13px;border-radius:8px;font-size:13.5px}
- .topnav a.link:hover{color:var(--ink);background:var(--panel2)}
- .topnav a.link.active{color:var(--teal);background:var(--panel2)}
- .wrap{max-width:1080px;margin:0 auto;padding:40px 24px 60px}
- .hero h1{font-size:32px;margin:0 0 8px;letter-spacing:-.01em}
- .hero p{color:var(--soft);margin:0 0 26px;max-width:60ch;font-size:16px}
- .stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:38px}
- .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;
- padding:16px 20px;min-width:120px}
- .stat b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
- .stat span{color:var(--soft);font-size:12.5px;text-transform:uppercase;letter-spacing:.04em}
- .stat.new b{color:var(--new)} .stat.comp b{color:var(--accent)}
- .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
- .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
- padding:22px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s}
- .card:hover{border-color:var(--teal)}
- .card .ic{font-size:26px}
- .card h3{margin:2px 0 0;font-size:18px}
- .card p{color:var(--soft);margin:0;font-size:14px;flex:1}
- .card .go{margin-top:12px;display:inline-block;color:#04202a;background:var(--teal);
- padding:9px 15px;border-radius:9px;font-size:13.5px;font-weight:600;align-self:flex-start}
- .card .go.ghost{background:transparent;color:var(--teal);border:1px solid var(--line)}
- .card .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
- h2.sec{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);
- margin:34px 0 14px}
+<style>
+  :root{--bg:#0e1219;--panel:#161c26;--panel2:#1b2330;--ink:#e8ecf3;--soft:#9aa5b6;
+    --line:#26303e;--accent:#e6953f;--teal:#4fb3bf;--new:#3ecf8e}
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--ink);font:15px/1.6 "Segoe UI",system-ui,sans-serif;min-height:100vh;
+    background:radial-gradient(1200px 500px at 80% -10%,#16202e 0%,transparent 60%),var(--bg)}
+  a{text-decoration:none}
+  .topnav{display:flex;align-items:center;gap:4px;padding:12px 24px;border-bottom:1px solid var(--line);
+    border-top:3px solid var(--accent);background:var(--panel);position:sticky;top:0;z-index:10}
+  .topnav .brand{font-weight:700;font-size:16px;color:var(--ink);margin-right:18px}
+  .topnav a.link{color:var(--soft);padding:7px 13px;border-radius:8px;font-size:13.5px}
+  .topnav a.link:hover{color:var(--ink);background:var(--panel2)}
+  .topnav a.link.active{color:var(--teal);background:var(--panel2)}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 24px 60px}
+  h1{font-size:32px;margin:0 0 8px;letter-spacing:-.01em}
+  .sub{color:var(--soft);margin:0 0 26px;max-width:64ch;font-size:16px}
+  .stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:40px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:110px}
+  .stat b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+  .stat span{color:var(--soft);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .stat.new b{color:var(--new)} .stat.comp b{color:var(--accent)}
+  h2.sec{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--soft);margin:30px 0 14px}
+  h2.sec small{color:var(--teal);text-transform:none;letter-spacing:0;font-size:13px;margin-left:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;
+    display:flex;flex-direction:column;gap:6px;transition:border-color .15s}
+  .card:hover{border-color:var(--teal)}
+  .card h3{margin:0;font-size:17px}
+  .card p{color:var(--soft);margin:0;font-size:14px;flex:1}
+  .card .go{margin-top:12px;color:#04202a;background:var(--teal);padding:9px 15px;border-radius:9px;
+    font-size:13.5px;font-weight:600;align-self:flex-start}
+  .card .go.ghost{background:transparent;color:var(--teal);border:1px solid var(--line)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 </style>
 </head>
 <body>
-<nav class="topnav"> <a class="brand" href="/">Job Command Center</a> <a class="link active" href="/">Home</a> <a class="link" href="/library">Library</a> <a class="link" href="/run">Run Center</a> <a class="link" href="/dashboard?file=/api/analysis.json">Dashboard</a> <a class="link" href="/builder">Command Builder</a>
+<nav class="topnav">
+  <a class="brand" href="/">Job Command Center</a>
+  <a class="link active" href="/">Home</a>
+  <a class="link" href="/library">Library</a>
+  <a class="link" href="/run">Run Center</a>
+  <a class="link" href="/salaries">Salaries</a>
+  <a class="link" href="/dashboard?file=/api/analysis.json">Dashboard</a>
+  <a class="link" href="/builder">Command Builder</a>
 </nav>
-<div class="wrap"> <div class="hero"> <h1>Job Command Center</h1> <p>Scrape every source, watch aerospace &amp; HAPS competitors, score matches with
- AI, and browse it all — from one place, backed by a single database.</p> <div class="stats" id="stats"><div class="stat"><b>…</b><span>loading</span></div></div> </div> <h2 class="sec">Run things</h2> <div class="grid"> <div class="card"> <h3>Run Center</h3> <p>Execute on this machine: scrape all websites, run AI analysis, or the full
- pipeline in one command — with live progress.</p> <div class="row"> <a class="go" href="/run">Open Run Center</a> <a class="go ghost" href="/builder">Advanced builder</a> </div> </div> <div class="card"> <h3>Competitor watch</h3> <p>Refresh the aerospace &amp; HAPS competitor feed (BAE, Leonardo, Sceye,
- AeroVironment, Prismatic) and see what's new since last run.</p> <a class="go" href="/run#monitor">Refresh &amp; monitor</a> </div> </div> <h2 class="sec">Browse results</h2> <div class="grid"> <div class="card"> <h3>Library</h3> <p>Full-text search across every role. Filter by competitor, new, AI score;
- read descriptions inline; export CSV.</p> <a class="go" href="/library">Open Library</a> </div> <div class="card"> <h3>Analytics Dashboard</h3> <p>Score distribution, processing pipeline, top opportunities and the company
- leaderboard — live from the database.</p> <a class="go" href="/dashboard?file=/api/analysis.json">View Dashboard</a> </div> <div class="card"> <h3>Command Builder</h3> <p>Fine-tune any scraper/analysis command with every option, copy it, or run
- it from the Run Center.</p> <a class="go ghost" href="/builder">Open Builder</a> </div> </div>
+<div class="wrap">
+  <h1>Job Command Center</h1>
+  <p class="sub">One workspace for three jobs: find your next role, write great job
+     descriptions, and research what roles pay — all over the same database of
+     scraped listings.</p>
+  <div class="stats" id="stats"><div class="stat"><b>…</b><span>loading</span></div></div>
+
+  <h2 class="sec">Find your next role <small>job hunting</small></h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Matches for you</h3>
+      <p>Score every listing against your CV (<code>data/cv.txt</code>) and see the
+         best-fit roles ranked, with the reasons behind each score.</p>
+      <div class="row">
+        <a class="go" href="/library?scored=1&sort=score">View top matches</a>
+        <a class="go ghost" href="/run">Score more</a>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Search &amp; filter</h3>
+      <p>Full-text search (abbreviation- and prefix-tolerant), filter by company,
+         "new since last run", competitor, and salary.</p>
+      <a class="go" href="/library">Open Library</a>
+    </div>
+  </div>
+
+  <h2 class="sec">Write job descriptions <small>hiring</small></h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Mine peer descriptions</h3>
+      <p>Read how competitors and primes word their roles — search their live
+         listings and pull the phrasing that works.</p>
+      <a class="go" href="/library?competitor=1">Browse competitor JDs</a>
+    </div>
+    <div class="card">
+      <h3>Run harvesters</h3>
+      <p>Pull fresh descriptions for a role or skill, or refresh the competitor
+         feed, straight from the machine.</p>
+      <div class="row">
+        <a class="go" href="/run">Run Center</a>
+        <a class="go ghost" href="/builder">Command Builder</a>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sec">Research pay <small>price investigation</small></h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Salary explorer</h3>
+      <p>Ranges parsed from real descriptions — median pay by seniority and by
+         employer, filterable by role. Know your number before you negotiate.</p>
+      <a class="go" href="/salaries">Open Salaries</a>
+    </div>
+    <div class="card">
+      <h3>Analytics dashboard</h3>
+      <p>Score distribution, pipeline and top opportunities — live from the
+         database.</p>
+      <a class="go ghost" href="/dashboard?file=/api/analysis.json">View Dashboard</a>
+    </div>
+  </div>
 </div>
 <script>
 fetch("/api/stats").then(r=>r.json()).then(d=>{
- const s=d.summary;
- document.getElementById("stats").innerHTML =
- `<div class="stat"><b>${s.total}</b><span>roles</span></div>`+
- `<div class="stat comp"><b>${s.competitor}</b><span>competitor</span></div>`+
- `<div class="stat new"><b>${s.new}</b><span>new</span></div>`+
- `<div class="stat"><b>${s.scored||0}</b><span>AI scored</span></div>`+
- `<div class="stat new"><b>${s.matched||0}</b><span>matched</span></div>`+
- `<div class="stat"><b>${s.companies}</b><span>companies</span></div>`;
+  const s=d.summary;
+  document.getElementById("stats").innerHTML =
+    `<div class="stat"><b>${s.total}</b><span>roles</span></div>`+
+    `<div class="stat"><b>${s.salaried||0}</b><span>with pay</span></div>`+
+    `<div class="stat comp"><b>${s.competitor}</b><span>competitor</span></div>`+
+    `<div class="stat new"><b>${s.new}</b><span>new</span></div>`+
+    `<div class="stat"><b>${s.scored||0}</b><span>AI scored</span></div>`+
+    `<div class="stat"><b>${s.companies}</b><span>companies</span></div>`;
 }).catch(()=>{document.getElementById("stats").innerHTML=
- '<div class="stat"><b>–</b><span>DB offline</span></div>';});
+  '<div class="stat"><b>–</b><span>DB offline</span></div>';});
 </script>
 </body>
 </html>

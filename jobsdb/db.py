@@ -96,6 +96,11 @@ jobs = Table(
     Column("ai_match", Boolean),
     Column("ai_reasons", Text),
     Column("ai_scored_at", TIMESTAMP(timezone=True)),
+    # Salary parsed from the description (price research)
+    Column("salary_min", Integer),
+    Column("salary_max", Integer),
+    Column("salary_currency", Text),
+    Column("salary_period", Text),
     Column("search", TSVECTOR),
     Column("raw", JSONB),
 )
@@ -110,9 +115,12 @@ def init_schema(engine):
         c.execute(text("CREATE INDEX IF NOT EXISTS idx_jobs_flags ON jobs(source, is_competitor, is_new, status)"))
         # Add AI columns to pre-existing tables (no-op if already present).
         for col, typ in [("ai_score", "INTEGER"), ("ai_match", "BOOLEAN"),
-                         ("ai_reasons", "TEXT"), ("ai_scored_at", "TIMESTAMPTZ")]:
+                         ("ai_reasons", "TEXT"), ("ai_scored_at", "TIMESTAMPTZ"),
+                         ("salary_min", "INTEGER"), ("salary_max", "INTEGER"),
+                         ("salary_currency", "TEXT"), ("salary_period", "TEXT")]:
             c.execute(text(f"ALTER TABLE jobs ADD COLUMN IF NOT EXISTS {col} {typ}"))
         c.execute(text("CREATE INDEX IF NOT EXISTS idx_jobs_ai ON jobs(ai_score)"))
+        c.execute(text("CREATE INDEX IF NOT EXISTS idx_jobs_salary ON jobs(salary_max)"))
 
 
 if __name__ == "__main__":
