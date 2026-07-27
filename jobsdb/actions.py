@@ -51,7 +51,8 @@ def start(kind, **kwargs):
     fn = {"refresh": _run_refresh, "ai": _run_ai, "scrape": _run_scrape,
           "analyze": _run_analyze, "pipeline": _run_pipeline,
           "adzuna": _run_adzuna, "providers": _run_providers,
-          "linkedin": _run_linkedin, "companies": _run_companies}.get(kind)
+          "linkedin": _run_linkedin, "companies": _run_companies,
+          "careers": _run_careers}.get(kind)
     if not fn:
         _finish(tid, False, f"unknown task '{kind}'")
         _running_kinds.discard(kind)
@@ -169,6 +170,22 @@ def _run_linkedin(tid, keywords="software engineer", geo_id="90009496",
                    capture_output=True, text=True, timeout=1800)
     TASKS[tid]["progress"] = 100
     _finish(tid, True, f"LinkedIn harvest done for {len(kws)} keyword(s)")
+
+
+# --- Careers crawl: jobs straight from company sites (multi-ATS) --------------
+def _run_careers(tid, keyword="software", limit=None):
+    py = sys.executable
+    TASKS[tid]["message"] = "detecting ATS + crawling company careers sites…"
+    cmd = [py, str(BASE_DIR / "scrapers" / "careers.py"), "--all", "-k", keyword]
+    if limit:
+        cmd += ["--limit", str(limit)]
+    subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True, timeout=2400)
+    TASKS[tid]["progress"] = 90
+    TASKS[tid]["message"] = "ingesting…"
+    subprocess.run([py, "-m", "jobsdb.ingest"], cwd=str(BASE_DIR),
+                   capture_output=True, text=True, timeout=1800)
+    TASKS[tid]["progress"] = 100
+    _finish(tid, True, "careers crawl done")
 
 
 # --- Company sweep: search the UK aerospace repository for software roles -----
