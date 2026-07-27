@@ -51,7 +51,7 @@ def start(kind, **kwargs):
     fn = {"refresh": _run_refresh, "ai": _run_ai, "scrape": _run_scrape,
           "analyze": _run_analyze, "pipeline": _run_pipeline,
           "adzuna": _run_adzuna, "providers": _run_providers,
-          "linkedin": _run_linkedin}.get(kind)
+          "linkedin": _run_linkedin, "companies": _run_companies}.get(kind)
     if not fn:
         _finish(tid, False, f"unknown task '{kind}'")
         _running_kinds.discard(kind)
@@ -169,6 +169,24 @@ def _run_linkedin(tid, keywords="software engineer", geo_id="90009496",
                    capture_output=True, text=True, timeout=1800)
     TASKS[tid]["progress"] = 100
     _finish(tid, True, f"LinkedIn harvest done for {len(kws)} keyword(s)")
+
+
+# --- Company sweep: search the UK aerospace repository for software roles -----
+def _run_companies(tid, keywords="software engineer", source="linkedin",
+                   country="gb", limit=10):
+    py = sys.executable
+    TASKS[tid]["message"] = f"searching {limit} companies for '{keywords}'…"
+    cmd = [py, str(BASE_DIR / "scrapers" / "company_search.py"),
+           "-k", keywords, "--source", source, "-c", country]
+    if limit:
+        cmd += ["--limit", str(limit)]
+    subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True, timeout=1800)
+    TASKS[tid]["progress"] = 90
+    TASKS[tid]["message"] = "ingesting…"
+    subprocess.run([py, "-m", "jobsdb.ingest"], cwd=str(BASE_DIR),
+                   capture_output=True, text=True, timeout=1800)
+    TASKS[tid]["progress"] = 100
+    _finish(tid, True, f"company sweep done ({limit} companies)")
 
 
 # --- Providers: multi-source fetch (free + key-gated), then ingest -----------
