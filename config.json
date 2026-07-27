@@ -1,6 +1,5 @@
 {
   "cv_file": "data/cv.txt",
-
   "scraping": {
     "location": "London",
     "geo_id": "90009496",
@@ -17,7 +16,6 @@
     "max_jobs_per_title": 0,
     "easy_apply": false
   },
-
   "analysis": {
     "backend": "claude",
     "model": "opus",
@@ -26,7 +24,6 @@
     "ollama_url": "http://localhost:11434",
     "ollama_model": "qwen2.5:7b"
   },
-
   "filters": {
     "exclude_in_title": [
       "junior",
@@ -35,7 +32,6 @@
       "apprentice",
       "entry level",
       "Trainee",
-
       "Architect",
       "Technical Lead",
       "Lead",
@@ -58,7 +54,6 @@
       "Security Engineer",
       "Solutions Engineer",
       "Network",
-
       "Chief Engineer",
       "Housekeeping",
       "Facilities",
@@ -71,7 +66,6 @@
       "Ground Engineering",
       "Site",
       "site manager",
-
       "BIM",
       "Geotechnical",
       "Fire Engineer",
@@ -89,7 +83,6 @@
       "electrical engineer",
       "mechanical engineer",
       "Rail",
-
       "Head of Food",
       "Catering",
       "Dubbing",
@@ -106,7 +99,6 @@
       "teacher",
       "lecturer",
       "professor",
-
       "Owner",
       "Talent",
       "Communications",
@@ -160,7 +152,6 @@
       "business development rep",
       "customer success",
       "support engineer",
-
       "Program Manager",
       "Programme Manager",
       "Project Manager",
@@ -303,5 +294,15 @@
       "millions of users": -2,
       "former mobile developer": -4
     }
+  },
+  "adzuna": {
+    "app_id": "",
+    "app_key": ""
+  },
+  "reed": {
+    "api_key": ""
+  },
+  "jooble": {
+    "api_key": ""
   }
 }

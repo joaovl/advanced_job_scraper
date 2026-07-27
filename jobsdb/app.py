@@ -269,7 +269,8 @@ def api_job(job_id):
 
 @app.route("/api/run/<kind>", methods=["POST"])
 def run_task(kind):
-    if kind not in ("refresh", "ai", "scrape", "analyze", "pipeline", "adzuna"):
+    if kind not in ("refresh", "ai", "scrape", "analyze", "pipeline", "adzuna",
+                    "providers", "linkedin"):
         return jsonify({"error": "unknown task"}), 400
     opts = request.get_json(silent=True) or {}
     tid = actions.start(kind, **opts)

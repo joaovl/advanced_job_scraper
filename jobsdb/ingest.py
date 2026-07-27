@@ -67,7 +67,7 @@ INCLUDE_GLOBS = [
     "primes_*.json", "aalto_*.json", "aero_jd_*.json", "gap_*.json",
     "linkedin_aero_*.json", "linkedin_flightsw*.json", "master_jd*.json",
     # broader keyword harvests + salary-rich providers
-    "linkedin_jobs*.json", "linkedin_kw_*.json", "adzuna_*.json",
+    "linkedin_jobs*.json", "linkedin_kw_*.json", "adzuna_*.json", "provider_*.json",
 ]
 
 

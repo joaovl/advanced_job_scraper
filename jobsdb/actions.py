@@ -50,11 +50,16 @@ def start(kind, **kwargs):
     tid = _new_task(kind)
     fn = {"refresh": _run_refresh, "ai": _run_ai, "scrape": _run_scrape,
           "analyze": _run_analyze, "pipeline": _run_pipeline,
-          "adzuna": _run_adzuna}.get(kind)
+          "adzuna": _run_adzuna, "providers": _run_providers,
+          "linkedin": _run_linkedin}.get(kind)
     if not fn:
         _finish(tid, False, f"unknown task '{kind}'")
         _running_kinds.discard(kind)
         return tid
+    # Only pass kwargs the target accepts, so extra UI fields never break dispatch.
+    import inspect
+    accepted = set(inspect.signature(fn).parameters)
+    kwargs = {k: v for k, v in kwargs.items() if k in accepted}
     threading.Thread(target=_wrap, args=(fn, tid, kwargs), daemon=True).start()
     return tid
 
@@ -142,6 +147,49 @@ def _run_pipeline(tid, location="London", time_range="48h", workers=4,
 
 def _keywords(kw):
     return [k.strip() for k in re.split(r"[;,]", kw or "") if k.strip()]
+
+
+# --- LinkedIn: public guest search (no login/API key), then ingest -----------
+def _run_linkedin(tid, keywords="software engineer", geo_id="90009496",
+                  time_range="7d", max_jobs=50):
+    py = sys.executable
+    kws = _keywords(keywords) or ["software engineer"]
+    ln = BASE_DIR / "scrapers" / "linkedin.py"
+    for i, kw in enumerate(kws):
+        TASKS[tid]["message"] = f"LinkedIn: '{kw}' ({i+1}/{len(kws)})"
+        TASKS[tid]["progress"] = int(i * 85 / len(kws))
+        slug = re.sub(r"[^a-z0-9]+", "_", kw.lower()).strip("_")
+        out = str(BASE_DIR / "output" / f"linkedin_kw_{slug}.json")
+        subprocess.run([py, str(ln), "-k", kw, "--geo-id", geo_id,
+                        "-t", time_range, "-n", str(max_jobs), "-o", out, "--no-merge"],
+                       cwd=str(BASE_DIR), capture_output=True, text=True, timeout=1200)
+    TASKS[tid]["message"] = "ingesting…"
+    TASKS[tid]["progress"] = 90
+    subprocess.run([py, "-m", "jobsdb.ingest"], cwd=str(BASE_DIR),
+                   capture_output=True, text=True, timeout=1800)
+    TASKS[tid]["progress"] = 100
+    _finish(tid, True, f"LinkedIn harvest done for {len(kws)} keyword(s)")
+
+
+# --- Providers: multi-source fetch (free + key-gated), then ingest -----------
+def _run_providers(tid, keywords="software engineer", providers="free",
+                   country="gb", location="", max_jobs=50):
+    py = sys.executable
+    kws = _keywords(keywords) or ["software engineer"]
+    for i, kw in enumerate(kws):
+        TASKS[tid]["message"] = f"providers [{providers}]: '{kw}' ({i+1}/{len(kws)})"
+        TASKS[tid]["progress"] = int(i * 85 / len(kws))
+        cmd = [py, "-m", "scrapers.providers", "-k", kw, "--providers", providers,
+               "-c", country, "-n", str(max_jobs)]
+        if location:
+            cmd += ["-l", location]
+        subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True, timeout=1200)
+    TASKS[tid]["message"] = "ingesting…"
+    TASKS[tid]["progress"] = 90
+    subprocess.run([py, "-m", "jobsdb.ingest"], cwd=str(BASE_DIR),
+                   capture_output=True, text=True, timeout=1800)
+    TASKS[tid]["progress"] = 100
+    _finish(tid, True, f"providers harvest done for {len(kws)} keyword(s)")
 
 
 # --- Adzuna: aggregator with structured salary, then ingest ------------------
