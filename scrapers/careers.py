@@ -176,16 +176,73 @@ def fetch_workday(groups, company):
     return out
 
 
+def fetch_successfactors(token, company):
+    """SAP SuccessFactors Career Site Builder (RCM) job search.
+
+    `token` is the careers site host or base URL (e.g. "careers.qinetiq.com").
+    CSB renders its job list at /search/?q=&startrow=N — 25 rows per page, each
+    row carrying a jobTitle-link, a jobLocation cell and a jobDepartment cell.
+    We page through startrow=1,26,51,... until a short page (or the reported
+    total) is reached. Real locations come straight from the jobLocation cell.
+    """
+    base = token if token.startswith("http") else f"https://{token}"
+    base = base.rstrip("/")
+    PAGE = 25
+    out, startrow, total, seen = [], 1, None, set()
+    while startrow <= (total or 10000) and startrow <= 2000:
+        r = requests.get(f"{base}/search/", params={"q": "", "startrow": startrow},
+                         headers=H, timeout=25)
+        html = r.text
+        if total is None:
+            m = re.search(r"of\s*<b>\s*([\d,]+)\s*</b>", html, re.I)
+            total = int(m.group(1).replace(",", "")) if m else PAGE
+        rows = re.findall(r'<tr[^>]*class="data-row[^"]*".*?</tr>', html, re.S)
+        if not rows:
+            break
+        new = 0
+        for row in rows:
+            lm = re.search(r'class="jobTitle-link"\s+href="([^"]+)".*?>(.*?)</a>', row, re.S)
+            if not lm:
+                continue
+            href = lm.group(1)
+            if href in seen:
+                continue
+            seen.add(href)
+            new += 1
+            import html as _html
+            title = _html.unescape(re.sub(r"<[^>]+>", " ", lm.group(2)))
+            locm = re.search(r'class="jobLocation">(.*?)</span>', row, re.S)
+            loc = _html.unescape(re.sub(r"<[^>]+>", " ", locm.group(1))) if locm else ""
+            loc = re.sub(r"\s+", " ", loc).strip().strip(",")
+            url = href if href.startswith("http") else base + href
+            out.append(_std(title, company, loc, url, "", "successfactors"))
+        if len(rows) < PAGE or new == 0:
+            break
+        startrow += PAGE
+    return out
+
+
 FETCHERS = {"greenhouse": fetch_greenhouse, "lever": fetch_lever, "ashby": fetch_ashby,
             "smartrecruiters": fetch_smartrecruiters, "recruitee": fetch_recruitee,
-            "workable": fetch_workable, "personio": fetch_personio, "bamboohr": fetch_bamboohr}
+            "workable": fetch_workable, "personio": fetch_personio, "bamboohr": fetch_bamboohr,
+            "successfactors": fetch_successfactors}
 
 
-def scrape_company(name, domain, keyword=None):
-    det = detect(domain)
-    if not det:
-        return None, []
-    platform, token, groups = det
+def scrape_company(name, domain, keyword=None, ats=None, token=None):
+    """Scrape one company's careers site.
+
+    If an explicit `ats` (+ optional `token`) is supplied — e.g. from a repo
+    entry {"ats": "successfactors", "token": "careers.qinetiq.com"} — we use it
+    directly and skip auto-detection. Otherwise fall back to detect().
+    """
+    if ats:
+        platform, groups = ats, None
+        token = token or domain
+    else:
+        det = detect(domain)
+        if not det:
+            return None, []
+        platform, token, groups = det
     try:
         if platform == "workday":
             jobs = fetch_workday(groups, name)
@@ -202,8 +259,10 @@ def scrape_company(name, domain, keyword=None):
 
 
 def load_repo():
+    # (name, site, ats, token) — ats/token are None unless the entry pins an ATS.
     d = json.load(open(REPO, encoding="utf-8"))
-    return [(c["name"], c.get("site", "")) for c in d.get("companies", []) if c.get("site")]
+    return [(c["name"], c.get("site", ""), c.get("ats"), c.get("token"))
+            for c in d.get("companies", []) if c.get("site") or c.get("ats")]
 
 
 def main():
@@ -212,6 +271,8 @@ def main():
     p.add_argument("--company", help="Company name")
     p.add_argument("--site", help="Company domain (with --company)")
     p.add_argument("--detect", help="Just detect the ATS for a domain")
+    p.add_argument("--ats", help="Force an ATS (e.g. successfactors), skipping detection")
+    p.add_argument("--token", help="ATS token/base URL (with --ats), e.g. careers.qinetiq.com")
     p.add_argument("-k", "--keyword", default=None, help="Extra keyword filter (default: software titles)")
     p.add_argument("--limit", type=int, help="First N companies (with --all)")
     args = p.parse_args()
@@ -228,15 +289,15 @@ def main():
         if args.limit:
             targets = targets[:args.limit]
     elif args.company and args.site:
-        targets = [(args.company, args.site)]
+        targets = [(args.company, args.site, args.ats, args.token)]
     else:
         p.error("use --all, or --company NAME --site DOMAIN, or --detect DOMAIN")
 
     OUTPUT_DIR.mkdir(exist_ok=True)
     all_jobs, summary = [], {}
-    for i, (name, site) in enumerate(targets, 1):
+    for i, (name, site, ats, token) in enumerate(targets, 1):
         print(f"  [{i}/{len(targets)}] {name} ({site}) …", end=" ", flush=True)
-        platform, jobs = scrape_company(name, site, args.keyword)
+        platform, jobs = scrape_company(name, site, args.keyword, ats=ats, token=token)
         summary[name] = (platform, len(jobs))
         all_jobs += jobs
         print(f"{platform or 'no ATS'}: {len(jobs)} software roles")

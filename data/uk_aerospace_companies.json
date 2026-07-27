@@ -13,7 +13,7 @@
     {"name": "Leonardo UK", "sector": "prime-defence", "site": "uk.leonardo.com", "hq": "Yeovil/Luton/Edinburgh", "on_workday": false},
     {"name": "Thales UK", "sector": "prime-defence", "site": "thalesgroup.com", "hq": "Crawley/Belfast/Glasgow", "on_workday": true},
     {"name": "MBDA UK", "sector": "missiles", "site": "mbda-systems.com", "hq": "Stevenage/Bristol", "on_workday": false},
-    {"name": "QinetiQ", "sector": "defence-rnd", "site": "qinetiq.com", "hq": "Farnborough", "on_workday": false},
+    {"name": "QinetiQ", "sector": "defence-rnd", "site": "qinetiq.com", "hq": "Farnborough", "on_workday": false, "ats": "successfactors", "token": "careers.qinetiq.com"},
     {"name": "Babcock International", "sector": "defence", "site": "babcockinternational.com", "hq": "London/Bristol", "on_workday": false},
     {"name": "GKN Aerospace", "sector": "tier1-structures", "site": "gknaerospace.com", "hq": "Bristol", "on_workday": false},
     {"name": "Collins Aerospace UK (RTX)", "sector": "avionics", "site": "collinsaerospace.com", "hq": "Wolverhampton/Plymouth", "on_workday": true},
