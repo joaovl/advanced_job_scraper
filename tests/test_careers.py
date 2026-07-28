@@ -165,3 +165,44 @@ def test_explicit_ats_skips_detection_and_filters(monkeypatch):
     assert platform == "successfactors"
     # ...and the default (software) title filter drops the Procurement Manager row.
     assert [j["title"] for j in jobs] == ["Software Engineer (Control & Autonomy)"]
+
+
+# --- WordPress REST job board (BAE Systems UK), offline ---
+
+_WP_PAGE = [
+    {"title": {"rendered": "Software Engineer &amp; Tester"},
+     "acf": {"location_from_ats": "Warton", "location_country": "United Kingdom"},
+     "link": "https://jobsearch.baesystems.com/job/software-engineer-1"},
+    {"title": {"rendered": "Procurement Lead"},
+     "acf": {"city_1": "Rochester"},
+     "link": "https://jobsearch.baesystems.com/job/procurement-2"},
+]
+
+
+class _WPResp:
+    headers = {"X-WP-TotalPages": "1"}          # single page -> loop stops after page 1
+
+    def __init__(self, data):
+        self._d = data
+
+    def json(self):
+        return self._d
+
+
+def test_wordpress_parses_and_forwards_country(monkeypatch):
+    seen = {}
+
+    def fake_get(url, params=None, headers=None, timeout=None):
+        seen.update(params or {})
+        seen["url"] = url
+        return _WPResp(_WP_PAGE)
+
+    monkeypatch.setattr(C.requests, "get", fake_get)
+    jobs = C.fetch_wordpress("jobsearch.baesystems.com?country=38", "BAE Systems")
+    assert seen["url"] == "https://jobsearch.baesystems.com/wp-json/wp/v2/jobs"
+    assert seen["country"] == "38"                       # token query forwarded (UK scope)
+    assert len(jobs) == 2                                # fetcher itself does not filter
+    assert jobs[0]["title"] == "Software Engineer & Tester"   # HTML entity unescaped
+    assert jobs[0]["location"] == "Warton"                    # ACF location_from_ats
+    assert jobs[1]["location"] == "Rochester"                 # falls back to city_1
+    assert jobs[0]["source"] == "Careers:wordpress"

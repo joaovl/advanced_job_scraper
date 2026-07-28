@@ -390,11 +390,54 @@ def fetch_algolia(token, company):
     return out
 
 
+def fetch_wordpress(token, company):
+    """WordPress REST API job board — a `jobs` custom post type exposed at
+    /wp-json/wp/v2/jobs (e.g. BAE Systems UK: jobsearch.baesystems.com).
+
+    `token` is the host, optionally with query params to steer the search — most
+    importantly a `country` taxonomy term id to scope by location:
+        "jobsearch.baesystems.com?country=38"      # 38 = United Kingdom
+        "jobsearch.baesystems.com?country=38&search=software"
+    We page with per_page=100 & page=N, using the X-WP-TotalPages header to know
+    when to stop. Titles arrive HTML-encoded in title.rendered; location lives in
+    the ACF fields (location_from_ats / city_1 / location_country).
+    """
+    import html as _html
+    raw = token if token.startswith("http") else "https://" + token
+    parts = urlsplit(raw)
+    host = parts.netloc or parts.path
+    extra = {k: v[0] for k, v in parse_qs(parts.query).items()}
+    api = f"https://{host}/wp-json/wp/v2/jobs"
+    out, page, pages = [], 1, None
+    while page <= (pages or 100):
+        params = {"per_page": 100, "page": page, "_fields": "title,acf,link", **extra}
+        r = requests.get(api, params=params, headers=H, timeout=25)
+        if pages is None:
+            try:
+                pages = int(r.headers.get("X-WP-TotalPages") or 1)
+            except ValueError:
+                pages = 1
+        try:
+            data = r.json()
+        except ValueError:
+            break
+        if not isinstance(data, list) or not data:
+            break
+        for x in data:
+            acf = x.get("acf") or {}
+            title = _html.unescape((x.get("title") or {}).get("rendered", ""))
+            loc = (acf.get("location_from_ats") or acf.get("city_1")
+                   or acf.get("location_country") or "")
+            out.append(_std(title, company, loc, x.get("link"), "", "wordpress"))
+        page += 1
+    return out
+
+
 FETCHERS = {"greenhouse": fetch_greenhouse, "lever": fetch_lever, "ashby": fetch_ashby,
             "smartrecruiters": fetch_smartrecruiters, "recruitee": fetch_recruitee,
             "workable": fetch_workable, "personio": fetch_personio, "bamboohr": fetch_bamboohr,
             "successfactors": fetch_successfactors, "phenom": fetch_phenom,
-            "algolia": fetch_algolia}
+            "algolia": fetch_algolia, "wordpress": fetch_wordpress}
 
 
 def scrape_company(name, domain, keyword=None, ats=None, token=None):
