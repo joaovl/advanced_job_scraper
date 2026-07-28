@@ -45,7 +45,12 @@ COMPETITORS = [
 
 def job_key(company, title, location, url):
     if url:
-        return url.split("?")[0]
+        base, _, q = url.partition("?")
+        # Keep the query when it carries the job id (BrassRing/Phenom/etc. put the
+        # unique id in the query string) — stripping it would merge distinct jobs.
+        if q and re.search(r"(?:^|&)(job[_-]?id|jobid|req[_-]?id|posting|id)=", q, re.I):
+            return url
+        return base
     return f"{company}|{title}|{location}".lower()
 
 
@@ -93,7 +98,7 @@ def collect_rows():
             company = j.get("company", "?") or "?"
             title = j.get("title", "") or ""
             location = j.get("location", "") or ""
-            url = (j.get("url", "") or "").split("?")[0]
+            url = (j.get("url", "") or "").strip()   # keep full URL; job_key decides
             key = job_key(company, title, location, url)
             desc = clean(j.get("description", ""))
             prev = rows.get(key)
