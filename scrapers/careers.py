@@ -5,8 +5,8 @@ Company careers-site crawler — jobs straight from the source, across locations
 Detects which Applicant Tracking System (ATS) a company uses from its careers
 page, then pulls jobs from that ATS's public API. Covers the common platforms:
 Greenhouse, Lever, Ashby, SmartRecruiters, Recruitee, Workable, Personio,
-BambooHR, and Workday. Output is the standard job schema (with location), written
-to output/careers_*.json for jobsdb.ingest.
+BambooHR, Workday, SuccessFactors, and Phenom People. Output is the standard job
+schema (with location), written to output/careers_*.json for jobsdb.ingest.
 
 Usage:
   python scrapers/careers.py --all -k software            # sweep the repository
@@ -17,8 +17,10 @@ import argparse
 import json
 import re
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlsplit, parse_qs
 
 import requests
 
@@ -156,6 +158,13 @@ def fetch_bamboohr(token, company):
     return out
 
 
+def _workday_groups(token):
+    """Parse an ATS-config Workday token "sub/wd/site[,site2,...]" into the
+    (sub, wd, site) tuples fetch_workday expects — one per career site."""
+    sub, wd, sites = token.split("/", 2)
+    return [(sub, wd, s.strip()) for s in sites.split(",") if s.strip()]
+
+
 def fetch_workday(groups, company):
     sub, wd, site = groups[0], groups[1], groups[2]
     api = f"https://{sub}.{wd}.myworkdayjobs.com/wday/cxs/{sub}/{site}/jobs"
@@ -222,10 +231,140 @@ def fetch_successfactors(token, company):
     return out
 
 
+def _phenom_extract(html):
+    """Pull the `eagerLoadRefineSearch` object embedded in a Phenom search page.
+
+    Phenom People (jobs.baesystems.com, careers.rtx.com, ...) server-renders its
+    first page of results as a JSON blob assigned to `phApp.ddo`. We grab the
+    `eagerLoadRefineSearch` value with a string-aware brace matcher (so literal
+    braces inside description text don't throw the balance off) and parse it.
+    Returns the decoded dict (with .totalHits and .data.jobs) or None.
+    """
+    key = 'eagerLoadRefineSearch":'
+    i = html.find(key)
+    if i < 0:
+        return None
+    depth, in_str, esc, out = 0, False, False, []
+    for ch in html[i + len(key):]:
+        out.append(ch)
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                break
+    try:
+        return json.loads("".join(out))
+    except json.JSONDecodeError:
+        return None
+
+
+def fetch_phenom(token, company):
+    """Phenom People career-site search (e.g. BAE Systems, RTX / Collins Aerospace).
+
+    `token` is the Phenom host, optionally with query params to steer the search:
+      "jobs.baesystems.com"
+      "careers.rtx.com?country=United Kingdom&locale=global/en&max=1600"
+    Supported params: locale (default "global/en"), keywords (default "software"),
+    country (client-side filter on the job's country facet), max (row cap).
+
+    Phenom renders results into the search page's `eagerLoadRefineSearch` blob;
+    we page through it with `&from=N` (20 rows/page), pulling real titles and
+    "City, State, Country" locations straight from the source.
+    """
+    raw = token if token.startswith("http") else "https://" + token
+    parts = urlsplit(raw)
+    host = parts.netloc or parts.path
+    q = parse_qs(parts.query)
+    locale = q.get("locale", ["global/en"])[0].strip("/")
+    keyword = q.get("keywords", ["software"])[0]
+    country = q.get("country", [None])[0]
+    max_rows = int(q.get("max", ["600"])[0])
+    base = f"https://{host}/{locale}/search-results"
+    headers = {**H, "Accept": "text/html,application/xhtml+xml",
+               "Accept-Language": "en-GB,en;q=0.9",
+               "Referer": f"https://{host}/{locale}/home"}
+    out, seen, frm, PAGE = [], set(), 0, 20
+    while frm < max_rows:
+        try:
+            r = requests.get(base, params={"keywords": keyword, "from": frm},
+                             headers=headers, timeout=25)
+            obj = _phenom_extract(r.text)
+        except requests.RequestException:
+            break
+        if not obj:
+            break
+        jobs = obj.get("data", {}).get("jobs", [])
+        total = obj.get("totalHits") or 0
+        if not jobs:
+            break
+        for j in jobs:
+            jid = j.get("jobId") or j.get("jobSeqNo") or j.get("reqId")
+            if jid in seen:
+                continue
+            seen.add(jid)
+            if country and (j.get("country") or "").strip().lower() != country.strip().lower():
+                continue
+            loc = j.get("cityStateCountry") or j.get("location") or ""
+            url = j.get("applyUrl") or (
+                f"https://{host}/{locale}/job/{j.get('jobSeqNo')}" if j.get("jobSeqNo") else "")
+            out.append(_std(j.get("title"), company, loc, url,
+                            j.get("descriptionTeaser") or "", "phenom"))
+        frm += PAGE
+        if frm >= total:
+            break
+        time.sleep(0.3)
+    return out
+
+
+def fetch_algolia(token, company):
+    """Algolia-backed careers search (e.g. MBDA / mbdacareers.co.uk).
+
+    Some careers sites are a thin front end over an Algolia index. `token` packs
+    the public search credentials as "appId:apiKey:indexName" — the App ID and a
+    search-only API key are exposed in the site's JS bundle. We POST to the
+    Algolia query API (https://{app}-dsn.algolia.net/1/indexes/{index}/query) and
+    page through hitsPerPage=100. Locations come from display_location, which may
+    be a list for multi-site roles.
+    """
+    app, key, index = token.split(":", 2)
+    url = f"https://{app}-dsn.algolia.net/1/indexes/{index}/query"
+    hdr = {**H, "X-Algolia-Application-Id": app, "X-Algolia-API-Key": key,
+           "Content-Type": "application/json"}
+    out, page = [], 0
+    while page < 50:
+        r = requests.post(url, headers=hdr,
+                          json={"query": "", "hitsPerPage": 100, "page": page}, timeout=25)
+        d = r.json()
+        hits = d.get("hits") or []
+        for x in hits:
+            loc = x.get("display_location") or x.get("location") or x.get("city")
+            if isinstance(loc, list):
+                loc = ", ".join(str(v) for v in loc if v)
+            out.append(_std(x.get("title"), company, loc,
+                            x.get("jd_url") or x.get("apply_url"),
+                            x.get("description"), "algolia"))
+        if not hits or page + 1 >= (d.get("nbPages") or 1):
+            break
+        page += 1
+    return out
+
+
 FETCHERS = {"greenhouse": fetch_greenhouse, "lever": fetch_lever, "ashby": fetch_ashby,
             "smartrecruiters": fetch_smartrecruiters, "recruitee": fetch_recruitee,
             "workable": fetch_workable, "personio": fetch_personio, "bamboohr": fetch_bamboohr,
-            "successfactors": fetch_successfactors}
+            "successfactors": fetch_successfactors, "phenom": fetch_phenom,
+            "algolia": fetch_algolia}
 
 
 def scrape_company(name, domain, keyword=None, ats=None, token=None):
@@ -245,7 +384,16 @@ def scrape_company(name, domain, keyword=None, ats=None, token=None):
         platform, token, groups = det
     try:
         if platform == "workday":
-            jobs = fetch_workday(groups, name)
+            if groups is None:
+                # ATS-config form: token = "sub/wd/site[,site2,...]" (e.g.
+                # "rollsroyce/wd3/professional,rrpowersystems"). Rolls-Royce et al.
+                # front their Workday tenant with a JS marketing page, so detect()
+                # never sees the myworkdayjobs URL — pin it explicitly instead.
+                jobs = []
+                for g in _workday_groups(token):
+                    jobs += fetch_workday(g, name)
+            else:
+                jobs = fetch_workday(groups, name)
         else:
             jobs = FETCHERS[platform](token, name)
     except Exception as e:

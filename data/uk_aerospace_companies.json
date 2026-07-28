@@ -7,7 +7,7 @@
     "airframer_directory": "https://www.airframer.com/farnborough.html"
   },
   "companies": [
-    {"name": "BAE Systems", "sector": "prime-defence", "site": "baesystems.com", "hq": "Farnborough", "on_workday": false},
+    {"name": "BAE Systems", "sector": "prime-defence", "site": "baesystems.com", "hq": "Farnborough", "on_workday": false, "ats": "phenom", "token": "jobs.baesystems.com?max=200", "ats_note": "jobs.baesystems.com is the BAE Systems Inc (US) Phenom instance; UK public roles live on the separate WordPress/FacetWP site jobsearch.baesystems.com (not Phenom)"},
     {"name": "Rolls-Royce", "sector": "prime-propulsion", "site": "rolls-royce.com", "hq": "Derby", "on_workday": false},
     {"name": "Airbus UK", "sector": "prime", "site": "airbus.com", "hq": "Filton/Broughton", "on_workday": true},
     {"name": "Leonardo UK", "sector": "prime-defence", "site": "uk.leonardo.com", "hq": "Yeovil/Luton/Edinburgh", "on_workday": false},
@@ -16,7 +16,7 @@
     {"name": "QinetiQ", "sector": "defence-rnd", "site": "qinetiq.com", "hq": "Farnborough", "on_workday": false, "ats": "successfactors", "token": "careers.qinetiq.com"},
     {"name": "Babcock International", "sector": "defence", "site": "babcockinternational.com", "hq": "London/Bristol", "on_workday": false},
     {"name": "GKN Aerospace", "sector": "tier1-structures", "site": "gknaerospace.com", "hq": "Bristol", "on_workday": false},
-    {"name": "Collins Aerospace UK (RTX)", "sector": "avionics", "site": "collinsaerospace.com", "hq": "Wolverhampton/Plymouth", "on_workday": true},
+    {"name": "Collins Aerospace UK (RTX)", "sector": "avionics", "site": "collinsaerospace.com", "hq": "Wolverhampton/Plymouth", "on_workday": true, "ats": "phenom", "token": "careers.rtx.com?country=United Kingdom&max=1600", "ats_note": "Collins Aerospace hires through the RTX parent Phenom site careers.rtx.com; filtered to United Kingdom software roles"},
     {"name": "Meggitt (Parker Aerospace)", "sector": "tier1-systems", "site": "parker.com", "hq": "Coventry", "on_workday": false},
     {"name": "Ultra (Ultra Electronics)", "sector": "defence-electronics", "site": "ultra.group", "hq": "Greenford", "on_workday": false},
     {"name": "Cobham", "sector": "aerospace-comms", "site": "cobham.com", "hq": "Wimborne", "on_workday": false},
