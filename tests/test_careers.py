@@ -94,6 +94,68 @@ def test_successfactors_accepts_full_base_url(monkeypatch):
     assert jobs[0]["url"].startswith("https://careers.qinetiq.com/job/")
 
 
+# --- Workday explicit-config token (searchText + per-tenant country facet) ---
+
+def test_parse_workday_token_with_facet_and_search():
+    groups, st, facets = C._parse_workday_token(
+        "rollsroyce/wd3/professional?searchText=software&facet=Country:ABC123")
+    assert groups == [("rollsroyce", "wd3", "professional")]
+    assert st == "software"
+    assert facets == {"Country": ["ABC123"]}          # tenant-specific facet key preserved
+
+
+def test_parse_workday_token_plain_and_multisite():
+    groups, st, facets = C._parse_workday_token("leonardocompany/wd3/SiteA,SiteB")
+    assert groups == [("leonardocompany", "wd3", "SiteA"),
+                      ("leonardocompany", "wd3", "SiteB")]
+    assert st == "" and facets == {}
+
+
+def test_fetch_workday_pages_to_total_and_forwards_facets(monkeypatch):
+    calls = []
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        calls.append(json)
+        off = json["offset"]
+
+        class R:
+            def json(self):
+                if off == 0:
+                    return {"total": 3, "jobPostings": [
+                        {"title": "SW Eng", "locationsText": "Derby", "externalPath": "/job/x"},
+                        {"title": "Principal SW", "locationsText": "Bristol", "externalPath": "/job/y"},
+                        {"title": "QA", "locationsText": "Luton", "externalPath": "/job/z"}]}
+                return {"total": 3, "jobPostings": []}
+        return R()
+
+    monkeypatch.setattr(C.requests, "post", fake_post)
+    jobs = C.fetch_workday(("rollsroyce", "wd3", "professional"), "Rolls-Royce",
+                           "software", {"Country": ["ABC"]})
+    assert len(jobs) == 3
+    assert calls[0]["searchText"] == "software"
+    assert calls[0]["appliedFacets"] == {"Country": ["ABC"]}
+    assert jobs[0]["url"] == "https://rollsroyce.wd3.myworkdayjobs.com/en-US/professional/job/x"
+    assert jobs[0]["source"] == "Careers:workday"
+    assert len(calls) == 1                              # stops once offset reaches total (no over-paging)
+
+
+# --- SuccessFactors token now carries keyword + location filter ---
+
+def test_successfactors_forwards_keyword_and_location(monkeypatch):
+    seen = {}
+
+    def fake_get(url, params=None, headers=None, timeout=None):
+        seen.update(params or {})
+        return _FakeResp(_SF_PAGE)
+
+    monkeypatch.setattr(C.requests, "get", fake_get)
+    jobs = C.fetch_successfactors(
+        "jobs.babcockinternational.com?q=software&locationsearch=United Kingdom", "Babcock")
+    assert seen["q"] == "software"
+    assert seen["locationsearch"] == "United Kingdom"
+    assert jobs[0]["url"].startswith("https://jobs.babcockinternational.com/")
+
+
 def test_explicit_ats_skips_detection_and_filters(monkeypatch):
     # Explicit ats must NOT call detect() (which would hit the network)...
     monkeypatch.setattr(C, "detect", lambda d: (_ for _ in ()).throw(AssertionError("detect called")))

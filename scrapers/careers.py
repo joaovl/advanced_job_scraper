@@ -165,23 +165,47 @@ def _workday_groups(token):
     return [(sub, wd, s.strip()) for s in sites.split(",") if s.strip()]
 
 
-def fetch_workday(groups, company):
+def _parse_workday_token(token):
+    """Explicit-config Workday token, path plus optional query:
+        "sub/wd/site[,site2,...][?searchText=..&facet=Key:Id[&facet=Key2:Id2]]"
+    Returns ([(sub,wd,site),...], search_text, {facetKey:[ids]}).
+
+    The facet key varies per tenant — most use "locationCountry" but some (e.g.
+    Rolls-Royce) name it "Country" — so it is spelled out in the token, not guessed.
+    """
+    path, _, query = token.partition("?")
+    q = parse_qs(query)
+    search_text = q.get("searchText", [""])[0]
+    facets = {}
+    for fv in q.get("facet", []):
+        k, _, v = fv.partition(":")
+        if k and v:
+            facets.setdefault(k, []).append(v)
+    return _workday_groups(path), search_text, facets
+
+
+def fetch_workday(groups, company, search_text="", facets=None):
     sub, wd, site = groups[0], groups[1], groups[2]
     api = f"https://{sub}.{wd}.myworkdayjobs.com/wday/cxs/{sub}/{site}/jobs"
-    out, off = [], 0
-    while off < 400:
+    base = f"https://{sub}.{wd}.myworkdayjobs.com/en-US/{site}"
+    body_facets = facets or {}
+    out, off, total = [], 0, None
+    while off < 5000:                        # safety ceiling; real stop is `total`
         r = requests.post(api, headers={**H, "Content-Type": "application/json"},
-                          json={"appliedFacets": {}, "limit": 20, "offset": off, "searchText": ""}, timeout=25)
-        jp = r.json().get("jobPostings", [])
+                          json={"appliedFacets": body_facets, "limit": 20,
+                                "offset": off, "searchText": search_text}, timeout=25)
+        data = r.json()
+        if total is None:
+            total = data.get("total") or 0
+        jp = data.get("jobPostings", [])
         if not jp:
             break
-        base = f"https://{sub}.{wd}.myworkdayjobs.com/en-US/{site}"
         for x in jp:
             out.append(_std(x.get("title"), company, x.get("locationsText"),
                             base + x.get("externalPath", ""), "", "workday"))
-        if len(jp) < 20:
-            break
         off += 20
+        if off >= total or len(jp) < 20:     # page through every result, not a fixed window
+            break
     return out
 
 
@@ -194,13 +218,19 @@ def fetch_successfactors(token, company):
     We page through startrow=1,26,51,... until a short page (or the reported
     total) is reached. Real locations come straight from the jobLocation cell.
     """
-    base = token if token.startswith("http") else f"https://{token}"
-    base = base.rstrip("/")
+    raw = token if token.startswith("http") else f"https://{token}"
+    parts = urlsplit(raw)
+    base = f"https://{parts.netloc or parts.path}".rstrip("/")
+    tq = parse_qs(parts.query)
+    kw = tq.get("q", [""])[0]                 # keyword; "" == list everything
+    locationsearch = tq.get("locationsearch", [None])[0]   # e.g. "United Kingdom"
     PAGE = 25
     out, startrow, total, seen = [], 1, None, set()
-    while startrow <= (total or 10000) and startrow <= 2000:
-        r = requests.get(f"{base}/search/", params={"q": "", "startrow": startrow},
-                         headers=H, timeout=25)
+    while startrow <= (total or 100000) and startrow <= 5000:
+        params = {"q": kw, "startrow": startrow}
+        if locationsearch:
+            params["locationsearch"] = locationsearch
+        r = requests.get(f"{base}/search/", params=params, headers=H, timeout=25)
         html = r.text
         if total is None:
             m = re.search(r"of\s*<b>\s*([\d,]+)\s*</b>", html, re.I)
@@ -385,13 +415,14 @@ def scrape_company(name, domain, keyword=None, ats=None, token=None):
     try:
         if platform == "workday":
             if groups is None:
-                # ATS-config form: token = "sub/wd/site[,site2,...]" (e.g.
-                # "rollsroyce/wd3/professional,rrpowersystems"). Rolls-Royce et al.
-                # front their Workday tenant with a JS marketing page, so detect()
-                # never sees the myworkdayjobs URL — pin it explicitly instead.
+                # ATS-config form: token = "sub/wd/site[,site2,...][?searchText=..&facet=Key:Id]"
+                # (e.g. "rollsroyce/wd3/professional?searchText=software&facet=Country:29247e57...").
+                # Rolls-Royce/Leonardo front their Workday tenant with a JS marketing
+                # page, so detect() never sees the myworkdayjobs URL — pin it explicitly.
+                gl, search_text, facets = _parse_workday_token(token)
                 jobs = []
-                for g in _workday_groups(token):
-                    jobs += fetch_workday(g, name)
+                for g in gl:
+                    jobs += fetch_workday(g, name, search_text, facets)
             else:
                 jobs = fetch_workday(groups, name)
         else:

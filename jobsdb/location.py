@@ -9,6 +9,12 @@ Handles the shapes the scrapers produce:
 import re
 
 _UK = ("united kingdom", "england", "scotland", "wales", "northern ireland")
+_CC_PREFIX = {
+    "gb": "United Kingdom", "uk": "United Kingdom", "it": "Italy",
+    "de": "Germany", "fr": "France", "es": "Spain", "pl": "Poland",
+    "us": "United States", "in": "India", "au": "Australia", "ca": "Canada",
+    "sg": "Singapore", "be": "Belgium", "nl": "Netherlands", "ie": "Ireland",
+}
 _US_STATES = (
     "florida", "california", "oklahoma", "utah", "georgia", "maryland",
     "south dakota", "ohio", "colorado", "virginia", "west virginia", "iowa",
@@ -28,7 +34,9 @@ _CITIES = {
         "edinburgh", "yeovil", "luton", "basildon", "stevenage", "filton",
         "portsmouth", "reading", "crawley", "gloucester", "broughton", "cwmbran",
         "linthouse", "cheadle", "derby", "whiteley", "havant", "alton", "bicester",
-        "southampton", "gaydon", "ampthill", "market deeping", "brough", "frimley"),
+        "southampton", "gaydon", "ampthill", "market deeping", "brough", "frimley",
+        "heybridge", "leicester", "plymouth", "wolverhampton", "barrow", "devonport",
+        "rosyth", "ashford", "coventry", "woking", "guildford", "harwell"),
     "India": ("bengaluru", "bangalore", "noida", "hyderabad", "pune", "mumbai",
         "delhi", "gurugram", "chennai", "indraprastha"),
     "France": ("toulouse", "elancourt", "cholet", "gennevilliers", "rennes",
@@ -50,7 +58,13 @@ def normalize_country(loc):
     s = loc.lower()
     if re.search(r"\d+\s+locations", s):
         return "Multiple"
-    if any(k in s for k in _UK) or re.search(r"\b(gbr|uk)\b", s):
+    # Leading ISO-2 country code with a dash separator, e.g. "IT - Torino",
+    # "DE - Darmstadt" (Leonardo/Workday convention). Requires the "CC - " shape
+    # so ordinary words ("in", "us") in free text can't trigger it.
+    m = re.match(r"\s*([a-z]{2})\s*-\s", s)
+    if m and m.group(1) in _CC_PREFIX:
+        return _CC_PREFIX[m.group(1)]
+    if any(k in s for k in _UK) or re.search(r"\b(gbr|gb|uk)\b", s):
         return "United Kingdom"
     if ("united states" in s or "u.s.a" in s or re.search(r"\busa?\b", s)
             or re.search(r"\bus-[a-z]{2}-", s) or re.search(r"\bafb\b", s)):
