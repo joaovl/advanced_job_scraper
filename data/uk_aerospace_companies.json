@@ -11,18 +11,18 @@
     {"name": "Rolls-Royce", "sector": "prime-propulsion", "site": "rolls-royce.com", "hq": "Derby", "on_workday": false, "ats": "workday", "token": "rollsroyce/wd3/professional?searchText=software&facet=Country:29247e57dbaf46fb855b224e03170bc7", "ats_note": "careers.rolls-royce.com is an AngularJS skin over the Workday tenant rollsroyce.wd3 (site 'professional'); this tenant names its country facet 'Country' (not 'locationCountry'); Country:29247e57... = United Kingdom"},
     {"name": "Airbus UK", "sector": "prime", "site": "airbus.com", "hq": "Filton/Broughton", "on_workday": true},
     {"name": "Leonardo UK", "sector": "prime-defence", "site": "uk.leonardo.com", "hq": "Yeovil/Luton/Edinburgh", "on_workday": false, "ats": "workday", "token": "leonardocompany/wd3/LeonardoCareerSite?searchText=software", "ats_note": "careers.uk.leonardo.com (Phenom, tenant LSOLSBGB) hands off to the Workday tenant leonardocompany.wd3 (site 'LeonardoCareerSite'); LeonardoCareerSite returned GB-only roles in probing; job_country is recomputed at ingest so non-UK rows can be filtered in queries"},
-    {"name": "Thales UK", "sector": "prime-defence", "site": "thalesgroup.com", "hq": "Crawley/Belfast/Glasgow", "on_workday": true},
+    {"name": "Thales UK", "sector": "prime-defence", "site": "thalesgroup.com", "hq": "Crawley/Belfast/Glasgow", "on_workday": true, "ats": "workday", "token": "thales/wd3/Careers?searchText=software&facet=locationCountry:29247e57dbaf46fb855b224e03170bc7", "ats_note": "group-wide Workday tenant thales.wd3 (site 'Careers'); UK via facet key 'locationCountry' id 29247e57... (897 software global, ~121 UK)"},
     {"name": "MBDA UK", "sector": "missiles", "site": "mbda-systems.com", "hq": "Stevenage/Bristol", "on_workday": false, "ats": "workday", "token": "mbda/wd3/MBDA-UK?searchText=software", "ats_note": "mbdacareers.co.uk is an Algolia front end, but jobs route to the public Workday tenant mbda.wd3 (site 'MBDA-UK', UK-only by definition); scraped via the unauthenticated Workday CXS API rather than the site's client-side Algolia key"},
     {"name": "QinetiQ", "sector": "defence-rnd", "site": "qinetiq.com", "hq": "Farnborough", "on_workday": false, "ats": "successfactors", "token": "careers.qinetiq.com"},
     {"name": "Babcock International", "sector": "defence", "site": "babcockinternational.com", "hq": "London/Bristol", "on_workday": false, "ats": "successfactors", "token": "jobs.babcockinternational.com?q=software&locationsearch=United Kingdom", "ats_note": "babcockinternational.com/careers (WordPress) links to the SAP SuccessFactors job site jobs.babcockinternational.com; scoped to UK software roles via q + locationsearch"},
-    {"name": "GKN Aerospace", "sector": "tier1-structures", "site": "gknaerospace.com", "hq": "Bristol", "on_workday": false},
+    {"name": "GKN Aerospace", "sector": "tier1-structures", "site": "gknaerospace.com", "hq": "Bristol", "on_workday": false, "ats": "successfactors", "token": "careers.gknaerospace.com?q=software&locationsearch=United Kingdom", "ats_note": "SAP SuccessFactors CSB on careers.gknaerospace.com; UK via locationsearch"},
     {"name": "Collins Aerospace UK (RTX)", "sector": "avionics", "site": "collinsaerospace.com", "hq": "Wolverhampton/Plymouth", "on_workday": true, "ats": "phenom", "token": "careers.rtx.com?country=United Kingdom&max=1600", "ats_note": "Collins Aerospace hires through the RTX parent Phenom site careers.rtx.com; filtered to United Kingdom software roles"},
     {"name": "Meggitt (Parker Aerospace)", "sector": "tier1-systems", "site": "parker.com", "hq": "Coventry", "on_workday": false},
-    {"name": "Ultra (Ultra Electronics)", "sector": "defence-electronics", "site": "ultra.group", "hq": "Greenford", "on_workday": false},
+    {"name": "Ultra (Ultra Electronics)", "sector": "defence-electronics", "site": "ultra.group", "hq": "Greenford", "on_workday": false, "ats": "workday", "token": "ultra/wd3/ultra-careers?searchText=software", "ats_note": "Cobham Ultra Workday tenant ultra.wd3 (site 'ultra-careers'); predominantly UK so no country facet"},
     {"name": "Cobham", "sector": "aerospace-comms", "site": "cobham.com", "hq": "Wimborne", "on_workday": false},
     {"name": "Curtiss-Wright UK", "sector": "avionics-electronics", "site": "curtisswright.com", "hq": "Ashford", "on_workday": false},
     {"name": "TT Electronics", "sector": "electronics", "site": "ttelectronics.com", "hq": "Woking", "on_workday": false},
-    {"name": "Marshall (ADG)", "sector": "aerospace-services", "site": "marshall.co.uk", "hq": "Cambridge", "on_workday": false},
+    {"name": "Marshall (ADG)", "sector": "aerospace-services", "site": "marshall.co.uk", "hq": "Cambridge", "on_workday": false, "ats": "workday", "token": "marshall/wd103/Marshall_Group", "ats_note": "Workday tenant marshall.wd103 (NOT wd3), site 'Marshall_Group'; small volume, all Cambridge UK — empty searchText to catch everything"},
     {"name": "Spirit AeroSystems (Belfast)", "sector": "structures", "site": "spiritaero.com", "hq": "Belfast", "on_workday": false},
 
     {"name": "AALTO HAPS", "sector": "haps", "site": "aaltohaps.com", "hq": "Farnborough", "on_workday": false},
@@ -49,13 +49,13 @@
     {"name": "Reaction Engines", "sector": "propulsion-rnd", "site": "reactionengines.co.uk", "hq": "Culham", "on_workday": false},
 
     {"name": "Ansys UK", "sector": "simulation-software", "site": "ansys.com", "hq": "Sheffield", "on_workday": false},
-    {"name": "Capgemini Engineering", "sector": "engineering-software", "site": "capgemini.com", "hq": "multiple UK", "on_workday": false},
+    {"name": "Capgemini Engineering", "sector": "engineering-software", "site": "capgemini.com", "hq": "multiple UK", "on_workday": false, "ats": "successfactors", "token": "careers.capgemini.com?q=software&locationsearch=United Kingdom", "ats_note": "SuccessFactors CSB on careers.capgemini.com (backend career5.successfactors.eu); UK via locationsearch"},
     {"name": "MathWorks UK", "sector": "simulation-software", "site": "mathworks.com", "hq": "Cambridge", "on_workday": false},
     {"name": "Cirium", "sector": "aviation-data", "site": "cirium.com", "hq": "London", "on_workday": false},
     {"name": "Tokamak Energy", "sector": "fusion-controls", "site": "tokamakenergy.com", "hq": "Abingdon", "on_workday": false},
     {"name": "Renishaw", "sector": "precision-eng", "site": "renishaw.com", "hq": "Wotton-under-Edge", "on_workday": false},
-    {"name": "Indra UK", "sector": "atm-defence", "site": "indracompany.com", "hq": "Whiteley", "on_workday": false},
-    {"name": "Frazer-Nash Consultancy", "sector": "systems-consultancy", "site": "fnc.co.uk", "hq": "Bristol", "on_workday": false},
-    {"name": "Roke Manor Research", "sector": "defence-rnd", "site": "roke.co.uk", "hq": "Romsey", "on_workday": false}
+    {"name": "Indra UK", "sector": "atm-defence", "site": "indracompany.com", "hq": "Whiteley", "on_workday": false, "ats": "workable", "token": "indra-uk", "ats_note": "dedicated UK&Ireland Workable board 'indra-uk' (whole board is UK/IE)"},
+    {"name": "Frazer-Nash Consultancy", "sector": "systems-consultancy", "site": "fnc.co.uk", "hq": "Bristol", "on_workday": false, "ats": "workday", "token": "kbr/wd5/Frazer_Nash_Careers?searchText=software", "ats_note": "owned by KBR — hosted on KBR's Workday tenant kbr.wd5, dedicated site 'Frazer_Nash_Careers'; all UK"},
+    {"name": "Roke Manor Research", "sector": "defence-rnd", "site": "roke.co.uk", "hq": "Romsey", "on_workday": false, "ats": "wordpress", "token": "roke.co.uk?type=job", "ats_note": "self-hosted WordPress, post type 'job' (singular) at /wp-json/wp/v2/job; location in the 'job-location' taxonomy; all-UK employer"}
   ]
 }

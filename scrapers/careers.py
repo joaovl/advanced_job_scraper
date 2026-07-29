@@ -390,27 +390,39 @@ def fetch_algolia(token, company):
     return out
 
 
-def fetch_wordpress(token, company):
-    """WordPress REST API job board — a `jobs` custom post type exposed at
-    /wp-json/wp/v2/jobs (e.g. BAE Systems UK: jobsearch.baesystems.com).
+def _wp_term_location(x):
+    """Pull a location from an embedded taxonomy (Roke: 'job-location' terms),
+    for WordPress sites that don't carry location in ACF fields."""
+    names = []
+    for group in (x.get("_embedded") or {}).get("wp:term", []):
+        for t in group:
+            if "location" in (t.get("taxonomy") or ""):
+                names.append(t.get("name", ""))
+    return ", ".join(dict.fromkeys(n for n in names if n))
 
-    `token` is the host, optionally with query params to steer the search — most
-    importantly a `country` taxonomy term id to scope by location:
-        "jobsearch.baesystems.com?country=38"      # 38 = United Kingdom
-        "jobsearch.baesystems.com?country=38&search=software"
-    We page with per_page=100 & page=N, using the X-WP-TotalPages header to know
-    when to stop. Titles arrive HTML-encoded in title.rendered; location lives in
-    the ACF fields (location_from_ats / city_1 / location_country).
+
+def fetch_wordpress(token, company):
+    """WordPress REST API job board — a custom post type exposed under /wp-json.
+
+    `token` is the host, optionally with query params:
+        "jobsearch.baesystems.com?country=38"   # BAE UK: post type 'jobs', 38 = UK
+        "roke.co.uk?type=job"                    # Roke: post type 'job' (singular)
+    Recognised token params: `type` (post type, default "jobs") is consumed here;
+    everything else (e.g. `country`, `search`) is forwarded to the REST query to
+    steer/scope the search. We page with per_page=100 & page=N using the
+    X-WP-TotalPages header. Titles arrive HTML-encoded in title.rendered; location
+    comes from ACF fields (BAE) or, failing that, an embedded location taxonomy (Roke).
     """
     import html as _html
     raw = token if token.startswith("http") else "https://" + token
     parts = urlsplit(raw)
     host = parts.netloc or parts.path
     extra = {k: v[0] for k, v in parse_qs(parts.query).items()}
-    api = f"https://{host}/wp-json/wp/v2/jobs"
+    post_type = extra.pop("type", "jobs")     # steer post type; not a WP query param
+    api = f"https://{host}/wp-json/wp/v2/{post_type}"
     out, page, pages = [], 1, None
     while page <= (pages or 100):
-        params = {"per_page": 100, "page": page, "_fields": "title,acf,link", **extra}
+        params = {"per_page": 100, "page": page, "_embed": 1, **extra}
         r = requests.get(api, params=params, headers=H, timeout=25)
         if pages is None:
             try:
@@ -427,7 +439,7 @@ def fetch_wordpress(token, company):
             acf = x.get("acf") or {}
             title = _html.unescape((x.get("title") or {}).get("rendered", ""))
             loc = (acf.get("location_from_ats") or acf.get("city_1")
-                   or acf.get("location_country") or "")
+                   or acf.get("location_country") or "") or _wp_term_location(x)
             out.append(_std(title, company, loc, x.get("link"), "", "wordpress"))
         page += 1
     return out

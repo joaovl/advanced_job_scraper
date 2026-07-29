@@ -208,6 +208,28 @@ def test_wordpress_parses_and_forwards_country(monkeypatch):
     assert jobs[0]["source"] == "Careers:wordpress"
 
 
+_WP_TAXO_PAGE = [
+    {"title": {"rendered": "Systems Engineer"}, "acf": {}, "link": "https://roke.co.uk/job/1",
+     "_embedded": {"wp:term": [[{"taxonomy": "job-category", "name": "Engineering"}],
+                               [{"taxonomy": "job-location", "name": "Romsey"}]]}},
+]
+
+
+def test_wordpress_singular_type_and_taxonomy_location(monkeypatch):
+    seen = {}
+
+    def fake_get(url, params=None, headers=None, timeout=None):
+        seen["url"] = url
+        seen.update(params or {})
+        return _WPResp(_WP_TAXO_PAGE)
+
+    monkeypatch.setattr(C.requests, "get", fake_get)
+    jobs = C.fetch_wordpress("roke.co.uk?type=job", "Roke")
+    assert seen["url"] == "https://roke.co.uk/wp-json/wp/v2/job"   # singular post type from ?type=
+    assert "type" not in seen                                     # consumed, not forwarded as a query param
+    assert jobs[0]["location"] == "Romsey"                        # pulled from the job-location taxonomy
+
+
 # ============================================================================
 # Field-mapping tests for each ATS fetcher's JSON/XML parsing (offline).
 # These lock the mapping from each platform's response shape to the standard
