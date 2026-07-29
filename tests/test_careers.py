@@ -288,6 +288,20 @@ def test_smartrecruiters_maps_and_stops(monkeypatch):
     assert j["url"] == "https://jobs.smartrecruiters.com/Acme/9"
 
 
+def test_smartrecruiters_forwards_country_and_strips_id(monkeypatch):
+    seen = {}
+
+    def fake_get(url, params=None, headers=None, timeout=None):
+        seen["url"] = url
+        seen.update(params or {})
+        return _JsonResp({"content": []})
+
+    monkeypatch.setattr(C.requests, "get", fake_get)
+    C.fetch_smartrecruiters("PAConsulting?country=gb", "PA Consulting")
+    assert seen["url"].endswith("/companies/PAConsulting/postings")   # query not part of company id
+    assert seen["country"] == "gb"                                    # scoping param forwarded
+
+
 def test_recruitee_maps_fields(monkeypatch):
     monkeypatch.setattr(C.requests, "get", lambda *a, **k: _JsonResp(
         {"offers": [{"title": "Full Stack Developer", "location": "Oxford",
@@ -297,12 +311,22 @@ def test_recruitee_maps_fields(monkeypatch):
         "Full Stack Developer", "Oxford", "Careers:recruitee")
 
 
-def test_workable_maps_fields(monkeypatch):
-    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _JsonResp(
-        {"jobs": [{"title": "Platform Engineer", "location": {"location_str": "Cambridge, UK"},
-                   "url": "https://acme.workable.com/j/1", "description": "d"}]}))
-    j = C.fetch_workable("acme", "Acme")[0]
-    assert j["title"] == "Platform Engineer" and j["location"] == "Cambridge, UK"
+def test_workable_maps_and_paginates(monkeypatch):
+    # Two pages via nextPage; second call (body has "token") returns the last page.
+    def fake_post(url, headers=None, json=None, timeout=None):
+        if "token" in (json or {}):
+            return _JsonResp({"total": 2, "results": [
+                {"title": "SRE", "shortcode": "B2", "location": {"city": "Leeds", "country": "United Kingdom"}}]})
+        return _JsonResp({"total": 2, "nextPage": "PAGE2", "results": [
+            {"title": "Platform Engineer", "shortcode": "A1",
+             "location": {"city": "Cambridge", "region": "England", "country": "United Kingdom"}}]})
+
+    monkeypatch.setattr(C.requests, "post", fake_post)
+    jobs = C.fetch_workable("acme", "Acme")
+    assert [j["title"] for j in jobs] == ["Platform Engineer", "SRE"]     # both pages fetched
+    assert jobs[0]["location"] == "Cambridge, England, United Kingdom"
+    assert jobs[0]["url"] == "https://apply.workable.com/acme/j/A1/"
+    assert jobs[0]["source"] == "Careers:workable"
 
 
 _PERSONIO_XML = (b'<?xml version="1.0"?><workzag-jobs><position>'

@@ -104,16 +104,24 @@ def fetch_ashby(token, company):
 
 
 def fetch_smartrecruiters(token, company):
+    """SmartRecruiters public postings API.
+
+    `token` is the company id, optionally with query params to scope the search —
+    most usefully `country` (ISO-2), e.g. "PAConsulting?country=gb" to pull only
+    UK postings instead of the global board.
+    """
+    tok, _, query = token.partition("?")
+    extra = {k: v[0] for k, v in parse_qs(query).items()}
     out, offset = [], 0
     while True:
-        j = requests.get(f"https://api.smartrecruiters.com/v1/companies/{token}/postings",
-                         params={"limit": 100, "offset": offset}, headers=H, timeout=25).json()
+        j = requests.get(f"https://api.smartrecruiters.com/v1/companies/{tok}/postings",
+                         params={"limit": 100, "offset": offset, **extra}, headers=H, timeout=25).json()
         content = j.get("content", [])
         for x in content:
             loc = x.get("location", {})
             locs = ", ".join(filter(None, [loc.get("city"), loc.get("country")]))
             out.append(_std(x.get("name"), company, locs,
-                            f"https://jobs.smartrecruiters.com/{token}/{x.get('id')}", "", "smartrecruiters"))
+                            f"https://jobs.smartrecruiters.com/{tok}/{x.get('id')}", "", "smartrecruiters"))
         if len(content) < 100:
             break
         offset += 100
@@ -127,11 +135,36 @@ def fetch_recruitee(token, company):
 
 
 def fetch_workable(token, company):
-    r = requests.get(f"https://{token}.workable.com/spi/v3/jobs", headers=H, timeout=25)
-    j = r.json()
-    return [_std(x.get("title"), company, x.get("location", {}).get("location_str"),
-                 x.get("url") or x.get("shortlink"), x.get("description"), "workable")
-            for x in j.get("jobs", [])]
+    """Workable public job board via the current widget API.
+
+    The old {token}.workable.com/spi/v3/jobs endpoint now 401s; the live public
+    API is POST apply.workable.com/api/v3/accounts/{token}/jobs, returning
+    {total, results, nextPage}. We page by re-POSTing {"token": nextPage} until
+    it runs out. Job URL is apply.workable.com/{token}/j/{shortcode}/.
+    """
+    api = f"https://apply.workable.com/api/v3/accounts/{token}/jobs"
+    hdr = {**H, "Content-Type": "application/json", "Accept": "application/json"}
+    out, seen = [], set()
+    body = {"query": "", "location": [], "department": []}
+    for _ in range(200):                      # page cap (100/page-ish -> huge ceiling)
+        try:
+            d = requests.post(api, headers=hdr, json=body, timeout=25).json()
+        except ValueError:
+            break
+        for x in d.get("results", []):
+            sc = x.get("shortcode")
+            if sc in seen:
+                continue
+            seen.add(sc)
+            loc = x.get("location") or {}
+            locs = ", ".join(filter(None, [loc.get("city"), loc.get("region"), loc.get("country")]))
+            url = f"https://apply.workable.com/{token}/j/{sc}/" if sc else ""
+            out.append(_std(x.get("title"), company, locs, url, "", "workable"))
+        nxt = d.get("nextPage")
+        if not nxt:
+            break
+        body = {"token": nxt}
+    return out
 
 
 def fetch_personio(token, company):
