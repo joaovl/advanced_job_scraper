@@ -118,6 +118,21 @@
     {"name": "Blu Wireless", "sector": "semiconductors", "site": "bluwireless.com", "hq": "Bristol", "on_workday": false, "ats": "workable", "token": "blu-wireless"},
     {"name": "CMR Surgical", "sector": "surgical-robotics", "site": "cmrsurgical.com", "hq": "Cambridge", "on_workday": false, "ats": "smartrecruiters", "token": "CMRSurgical?country=gb"},
     {"name": "Quantinuum", "sector": "quantum", "site": "quantinuum.com", "hq": "Cambridge", "on_workday": false, "ats": "lever", "token": "eu:quantinuum"},
-    {"name": "Alphawave Semi", "sector": "semiconductors", "site": "awavesemi.com", "hq": "London", "on_workday": false, "ats": "workday", "token": "alphawave/wd10/Alphawave_External?searchText=software"}
+    {"name": "Alphawave Semi", "sector": "semiconductors", "site": "awavesemi.com", "hq": "London", "on_workday": false, "ats": "workday", "token": "alphawave/wd10/Alphawave_External?searchText=software"},
+
+    {"name": "Palantir Technologies", "sector": "defence-software", "site": "palantir.com", "hq": "London", "on_workday": false, "ats": "lever", "token": "palantir", "ats_note": "global Lever board; ~57 UK software of 285 total, filter UK via job_country"},
+    {"name": "Motorola Solutions", "sector": "defence-comms", "site": "motorolasolutions.com", "hq": "Uxbridge", "on_workday": false, "ats": "workday", "token": "motorolasolutions/wd5/Careers?searchText=software&facet=locationCountry:29247e57dbaf46fb855b224e03170bc7"},
+    {"name": "Saab UK", "sector": "defence-electronics", "site": "saab.com", "hq": "Fareham/Fleet", "on_workday": false, "ats": "workday", "token": "saabgroup/wd116/Saab_careers?searchText=software", "ats_note": "no UK facet on this tenant; global software, filter UK via job_country"},
+    {"name": "Teledyne (FLIR/e2v)", "sector": "defence-imaging-space", "site": "teledyne.com", "hq": "Fareham/Chelmsford", "on_workday": false, "ats": "workday", "token": "flir/wd1/flircareers?searchText=software&facet=locationCountry:29247e57dbaf46fb855b224e03170bc7"},
+    {"name": "CAE", "sector": "simulation-training", "site": "cae.com", "hq": "Burgess Hill", "on_workday": false, "ats": "workday", "token": "cae/wd3/career?searchText=software", "ats_note": "no UK facet; global software, filter UK via job_country (Burgess Hill)"},
+    {"name": "Moog", "sector": "aerospace-actuation", "site": "moog.com", "hq": "Tewkesbury/Wolverhampton", "on_workday": false, "ats": "workday", "token": "moog/wd5/MOOG_External_Career_Site?searchText=software", "ats_note": "no UK facet; global software, filter UK via job_country (Tewkesbury GBR)"},
+    {"name": "KBR", "sector": "defence-services", "site": "kbr.com", "hq": "Leatherhead/Bristol", "on_workday": false, "ats": "workday", "token": "kbr/wd5/KBR_Careers?searchText=software", "ats_note": "skews IT/facilities; UK via job_country"},
+    {"name": "E-Space", "sector": "space", "site": "e-space.com", "hq": "Loughborough", "on_workday": false, "ats": "lever", "token": "espace"},
+    {"name": "Shield AI", "sector": "uav-autonomy", "site": "shield.ai", "hq": "London", "on_workday": false, "ats": "lever", "token": "shieldai", "ats_note": "AALTO competitor; global Lever board, ~17 UK of 429, filter UK via job_country"},
+    {"name": "Arondite", "sector": "defence-ai", "site": "arondite.com", "hq": "London", "on_workday": false, "ats": "workable", "token": "arondite"},
+    {"name": "Hamiltonian Dynamics", "sector": "defence-software", "site": "hamiltonian-dynamics.com", "hq": "Cheltenham", "on_workday": false, "ats": "workable", "token": "hamiltonian-dynamics"},
+    {"name": "Bohemia Interactive Simulations", "sector": "simulation-training", "site": "bisimulations.com", "hq": "UK", "on_workday": false, "ats": "workable", "token": "bohemia-interactive-simulations-inc"},
+    {"name": "Flow Engineering", "sector": "aerospace-software", "site": "flowengineering.com", "hq": "London", "on_workday": false, "ats": "ashby", "token": "flowengineering"},
+    {"name": "Comand AI", "sector": "defence-ai", "site": "comand.ai", "hq": "London", "on_workday": false, "ats": "ashby", "token": "comand-ai"}
   ]
 }
