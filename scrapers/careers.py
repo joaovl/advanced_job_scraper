@@ -45,6 +45,7 @@ PATTERNS = [
     ("workable",   re.compile(r"apply\.workable\.com/([a-z0-9-]+)", re.I)),
     ("personio",   re.compile(r"([a-z0-9-]+)\.jobs\.personio\.com", re.I)),
     ("bamboohr",   re.compile(r"([a-z0-9-]+)\.bamboohr\.com", re.I)),
+    ("teamtailor", re.compile(r"([a-z0-9-]+)\.teamtailor\.com", re.I)),
     ("workday",    re.compile(r"([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:en-US/|wday/cxs/[a-z0-9-]+/)?([A-Za-z0-9_]+)", re.I)),
 ]
 
@@ -89,7 +90,12 @@ def fetch_greenhouse(token, company):
 
 
 def fetch_lever(token, company):
-    j = requests.get(f"https://api.lever.co/v0/postings/{token}?mode=json",
+    # Lever has regional hosts; EU-hosted boards (e.g. Quantinuum) use the
+    # "eu:" prefix -> api.eu.lever.co, otherwise the default US host.
+    host = "api.lever.co"
+    if token.startswith("eu:"):
+        host, token = "api.eu.lever.co", token[3:]
+    j = requests.get(f"https://{host}/v0/postings/{token}?mode=json",
                      headers=H, timeout=25).json()
     return [_std(x.get("text"), company, (x.get("categories") or {}).get("location"),
                  x.get("hostedUrl"), x.get("descriptionPlain"), "lever") for x in j]
@@ -478,11 +484,53 @@ def fetch_wordpress(token, company):
     return out
 
 
+def fetch_teamtailor(token, company):
+    """Teamtailor public board via its keyless RSS feed (GET {host}/jobs.rss).
+
+    `token` may be a full host ("careers.open-cosmos.com"), a *.teamtailor.com
+    host, or a bare slug ("automata" -> automata.teamtailor.com). One request
+    returns the whole published board (no pagination). Standard RSS <item>s carry
+    title/link/description; location lives in a tt:locations element whose
+    descendant text we flatten.
+    """
+    import xml.etree.ElementTree as ET
+    import html as _html
+    if token.startswith("http"):
+        host = token
+    elif "." in token:
+        host = "https://" + token
+    else:
+        host = f"https://{token}.teamtailor.com"
+    try:
+        r = requests.get(f"{host.rstrip('/')}/jobs.rss", headers=H, timeout=25)
+        root = ET.fromstring(r.content)
+    except (requests.RequestException, ET.ParseError):
+        return []
+    out = []
+    for item in root.iter("item"):
+        title = link = desc = loc = ""
+        for ch in item:
+            tag = ch.tag.split("}")[-1].lower()      # drop XML namespace
+            txt = (ch.text or "").strip()
+            if tag == "title":
+                title = txt
+            elif tag == "link":
+                link = txt
+            elif tag == "description":
+                desc = txt
+            elif "location" in tag:                  # tt:locations (may nest name/city/country)
+                names = [(g.text or "").strip() for g in ch.iter() if (g.text or "").strip()]
+                loc = ", ".join(dict.fromkeys(names)) if names else txt
+        out.append(_std(_html.unescape(title), company, _html.unescape(loc),
+                        link, desc, "teamtailor"))
+    return out
+
+
 FETCHERS = {"greenhouse": fetch_greenhouse, "lever": fetch_lever, "ashby": fetch_ashby,
             "smartrecruiters": fetch_smartrecruiters, "recruitee": fetch_recruitee,
             "workable": fetch_workable, "personio": fetch_personio, "bamboohr": fetch_bamboohr,
             "successfactors": fetch_successfactors, "phenom": fetch_phenom,
-            "algolia": fetch_algolia, "wordpress": fetch_wordpress}
+            "algolia": fetch_algolia, "wordpress": fetch_wordpress, "teamtailor": fetch_teamtailor}
 
 
 def scrape_company(name, domain, keyword=None, ats=None, token=None):

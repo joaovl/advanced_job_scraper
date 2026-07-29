@@ -344,6 +344,41 @@ def test_personio_maps_fields(monkeypatch):
     assert j["url"] == "https://acme.jobs.personio.com/job/5"
 
 
+_TT_RSS = (b'<?xml version="1.0"?><rss xmlns:tt="https://teamtailor.com/locations">'
+           b'<channel><item><title>Staff Software Engineer</title>'
+           b'<link>https://x.teamtailor.com/jobs/1-sse</link>'
+           b'<description>Great role</description>'
+           b'<tt:locations><tt:location><name>London</name>'
+           b'<country>United Kingdom</country></tt:location></tt:locations>'
+           b'</item></channel></rss>')
+
+
+def test_teamtailor_parses_rss(monkeypatch):
+    class _R:
+        content = _TT_RSS
+    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _R())
+    j = C.fetch_teamtailor("automata.teamtailor.com", "Automata")[0]
+    assert j["title"] == "Staff Software Engineer"
+    assert j["url"] == "https://x.teamtailor.com/jobs/1-sse"
+    assert "London" in j["location"] and "United Kingdom" in j["location"]
+    assert j["source"] == "Careers:teamtailor"
+
+
+def test_teamtailor_bare_slug_builds_host(monkeypatch):
+    seen = {}
+
+    def fake_get(url, headers=None, timeout=None):
+        seen["url"] = url
+
+        class _R:
+            content = _TT_RSS
+        return _R()
+
+    monkeypatch.setattr(C.requests, "get", fake_get)
+    C.fetch_teamtailor("automata", "Automata")            # bare slug -> *.teamtailor.com
+    assert seen["url"] == "https://automata.teamtailor.com/jobs.rss"
+
+
 def test_algolia_maps_and_joins_location(monkeypatch):
     monkeypatch.setattr(C.requests, "post", lambda *a, **k: _JsonResp(
         {"hits": [{"title": "Software Engineer", "display_location": ["Stevenage", "Bristol"],
