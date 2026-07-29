@@ -206,3 +206,105 @@ def test_wordpress_parses_and_forwards_country(monkeypatch):
     assert jobs[0]["location"] == "Warton"                    # ACF location_from_ats
     assert jobs[1]["location"] == "Rochester"                 # falls back to city_1
     assert jobs[0]["source"] == "Careers:wordpress"
+
+
+# ============================================================================
+# Field-mapping tests for each ATS fetcher's JSON/XML parsing (offline).
+# These lock the mapping from each platform's response shape to the standard
+# job schema, so a field rename in a fetcher is caught immediately.
+# ============================================================================
+
+class _JsonResp:
+    def __init__(self, data, headers=None):
+        self._d, self.headers = data, headers or {}
+
+    def json(self):
+        return self._d
+
+
+def test_greenhouse_maps_fields(monkeypatch):
+    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _JsonResp(
+        {"jobs": [{"title": "Backend Engineer", "location": {"name": "London, UK"},
+                   "absolute_url": "https://boards.gh/acme/1", "content": "Build APIs."}]}))
+    j = C.fetch_greenhouse("acme", "Acme")[0]
+    assert (j["title"], j["location"], j["url"], j["source"]) == (
+        "Backend Engineer", "London, UK", "https://boards.gh/acme/1", "Careers:greenhouse")
+
+
+def test_lever_maps_fields(monkeypatch):
+    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _JsonResp(
+        [{"text": "Site Reliability Engineer", "categories": {"location": "Remote - UK"},
+          "hostedUrl": "https://jobs.lever.co/acme/1", "descriptionPlain": "Keep it up."}]))
+    j = C.fetch_lever("acme", "Acme")[0]
+    assert (j["title"], j["location"], j["url"], j["source"]) == (
+        "Site Reliability Engineer", "Remote - UK", "https://jobs.lever.co/acme/1", "Careers:lever")
+
+
+def test_ashby_maps_fields(monkeypatch):
+    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _JsonResp(
+        {"jobs": [{"title": "C++ Engineer", "location": "Bristol",
+                   "jobUrl": "https://jobs.ashbyhq.com/acme/1", "descriptionPlain": "d"}]}))
+    j = C.fetch_ashby("acme", "Acme")[0]
+    assert (j["title"], j["location"], j["source"]) == ("C++ Engineer", "Bristol", "Careers:ashby")
+
+
+def test_bamboohr_joins_location(monkeypatch):
+    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _JsonResp(
+        {"result": [{"jobOpeningName": "Firmware Engineer",
+                     "location": {"city": "Harwell", "state": None, "country": "UK"}, "id": "7"}]}))
+    j = C.fetch_bamboohr("astroscale", "Astroscale")[0]
+    assert j["title"] == "Firmware Engineer"
+    assert j["location"] == "Harwell, UK"                       # None state dropped
+    assert j["url"] == "https://astroscale.bamboohr.com/careers/7"
+
+
+def test_smartrecruiters_maps_and_stops(monkeypatch):
+    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _JsonResp(
+        {"content": [{"name": "Data Engineer", "location": {"city": "London", "country": "uk"}, "id": "9"}]}))
+    j = C.fetch_smartrecruiters("Acme", "Acme")[0]
+    assert j["title"] == "Data Engineer" and j["location"] == "London, uk"
+    assert j["url"] == "https://jobs.smartrecruiters.com/Acme/9"
+
+
+def test_recruitee_maps_fields(monkeypatch):
+    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _JsonResp(
+        {"offers": [{"title": "Full Stack Developer", "location": "Oxford",
+                     "careers_url": "https://acme.recruitee.com/o/1", "description": "d"}]}))
+    j = C.fetch_recruitee("acme", "Acme")[0]
+    assert (j["title"], j["location"], j["source"]) == (
+        "Full Stack Developer", "Oxford", "Careers:recruitee")
+
+
+def test_workable_maps_fields(monkeypatch):
+    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _JsonResp(
+        {"jobs": [{"title": "Platform Engineer", "location": {"location_str": "Cambridge, UK"},
+                   "url": "https://acme.workable.com/j/1", "description": "d"}]}))
+    j = C.fetch_workable("acme", "Acme")[0]
+    assert j["title"] == "Platform Engineer" and j["location"] == "Cambridge, UK"
+
+
+_PERSONIO_XML = (b'<?xml version="1.0"?><workzag-jobs><position>'
+                 b'<id>5</id><name>Embedded Engineer</name><office>Bristol</office>'
+                 b'<jobDescriptions><jobDescription><value>Great role</value>'
+                 b'</jobDescription></jobDescriptions></position></workzag-jobs>')
+
+
+def test_personio_maps_fields(monkeypatch):
+    class _XmlResp:
+        content = _PERSONIO_XML
+    monkeypatch.setattr(C.requests, "get", lambda *a, **k: _XmlResp())
+    j = C.fetch_personio("acme", "Acme")[0]
+    assert j["title"] == "Embedded Engineer" and j["location"] == "Bristol"
+    assert j["url"] == "https://acme.jobs.personio.com/job/5"
+
+
+def test_algolia_maps_and_joins_location(monkeypatch):
+    monkeypatch.setattr(C.requests, "post", lambda *a, **k: _JsonResp(
+        {"hits": [{"title": "Software Engineer", "display_location": ["Stevenage", "Bristol"],
+                   "jd_url": "/job/1", "description": "d"},
+                  {"title": "QA", "city": "Bolton", "apply_url": "https://a/2", "description": "d"}],
+         "nbPages": 1}))
+    jobs = C.fetch_algolia("APP:KEY:idx", "MBDA")
+    assert jobs[0]["location"] == "Stevenage, Bristol"          # list joined
+    assert jobs[0]["url"] == "/job/1" and jobs[0]["source"] == "Careers:algolia"
+    assert jobs[1]["location"] == "Bolton"
