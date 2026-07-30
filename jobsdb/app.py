@@ -127,16 +127,27 @@ def _where(args):
         clauses.append("search @@ to_tsquery('english', :q)")
         params["q"] = tsq
     if args.get("min_salary"):
-        clauses.append("salary_max >= :min_salary")
+        clauses.append("COALESCE(salary_max, salary_min) >= :min_salary")
         params["min_salary"] = int(args["min_salary"])
     if args.get("has_salary") == "1":
-        clauses.append("salary_max IS NOT NULL")
+        # Consistent with the pay badge: a role counts as "has pay" if either
+        # bound is set (some sources give only a minimum).
+        clauses.append("(salary_max IS NOT NULL OR salary_min IS NOT NULL)")
     if args.get("source"):
         clauses.append("source = :source")
         params["source"] = args["source"]
-    if args.get("company"):
-        clauses.append("company = :company")
-        params["company"] = args["company"]
+    # One, many (repeated ?company=), or a comma-separated list of companies.
+    companies = args.getlist("company")
+    if len(companies) == 1 and "," in companies[0]:
+        companies = companies[0].split(",")
+    companies = [c.strip() for c in companies if c.strip()]
+    if companies:
+        keys = []
+        for i, co in enumerate(companies):
+            k = f"company{i}"
+            params[k] = co
+            keys.append(f":{k}")
+        clauses.append(f"company IN ({', '.join(keys)})")
     if args.get("country"):
         clauses.append("job_country = :country")
         params["country"] = args["country"]

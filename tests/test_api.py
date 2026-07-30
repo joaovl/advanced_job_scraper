@@ -166,6 +166,19 @@ def test_run_dispatch_validation(client):
     assert client.get("/api/task/nope").status_code == 404
 
 
+def test_jobs_multi_company_filter(client):
+    import urllib.parse
+    stats = client.get("/api/stats").get_json()
+    cos = [c["company"] for c in stats["companies"][:2]]
+    if len(cos) < 2:
+        return
+    counts = {c["company"]: c["n"] for c in stats["companies"]}
+    qs = "&".join("company=" + urllib.parse.quote(c) for c in cos)
+    d = client.get("/api/jobs?" + qs).get_json()
+    assert {r["company"] for r in d["rows"]} <= set(cos)          # only selected companies
+    assert d["total"] == counts[cos[0]] + counts[cos[1]]         # union of both
+
+
 def test_run_routes_gated_without_cookie(client):
     assert client.post("/api/run/refresh").status_code == 401     # gated api
     assert client.get("/run").status_code == 302                  # gated page -> /unlock
