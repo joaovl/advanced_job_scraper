@@ -153,5 +153,19 @@ def test_stats_reports_salaried(client, seeded):
 
 
 def test_run_dispatch_validation(client):
+    # /api/run and /api/task are behind the TOTP gate — unlock first, then the
+    # underlying validation (400 unknown kind, 404 unknown task) should show.
+    import time
+    from jobsdb import auth
+    cookie = auth.sign(int(time.time()) + 3600)
+    try:
+        client.set_cookie(auth.COOKIE, cookie)
+    except TypeError:
+        client.set_cookie("localhost", auth.COOKIE, cookie)
     assert client.post("/api/run/bogus").status_code == 400
     assert client.get("/api/task/nope").status_code == 404
+
+
+def test_run_routes_gated_without_cookie(client):
+    assert client.post("/api/run/refresh").status_code == 401     # gated api
+    assert client.get("/run").status_code == 302                  # gated page -> /unlock

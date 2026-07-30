@@ -1,0 +1,10 @@
+# Slim runtime for the deployed web app + careers crawler + daily update.
+# No Playwright/aiohttp/watchdog — the careers crawler and providers are pure HTTP.
+requests>=2.28.0
+beautifulsoup4>=4.11.0
+lxml>=4.9.0
+openpyxl>=3.1.0
+Flask>=3.0
+SQLAlchemy>=2.0
+psycopg2-binary>=2.9
+gunicorn>=21.0

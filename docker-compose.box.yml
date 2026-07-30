@@ -1,0 +1,39 @@
+# Box deploy: Flask web app + its own Postgres. The web container binds
+# 127.0.0.1:8210 (Cloudflare Tunnel ingress points jobs.joaovpl.uk here).
+# Secrets come from ./.env on the box (never committed):
+#   POSTGRES_PASSWORD, MEETINGS_TOTP_SECRET, MEETINGS_COOKIE_DOMAIN
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aalto}
+      POSTGRES_DB: aalto_jobs
+    volumes:
+      - jobs_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aalto_jobs"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-aalto}
+      PGDATABASE: aalto_jobs
+      MEETINGS_TOTP_SECRET: ${MEETINGS_TOTP_SECRET:-}
+      MEETINGS_COOKIE_DOMAIN: ${MEETINGS_COOKIE_DOMAIN:-.joaovpl.uk}
+    ports:
+      - "127.0.0.1:8210:8000"
+
+volumes:
+  jobs_pg:

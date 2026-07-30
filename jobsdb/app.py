@@ -21,11 +21,63 @@ from sqlalchemy import text
 
 from .db import get_engine
 from . import actions
+from . import auth
 
 app = Flask(__name__)
 engine = get_engine(create_db_if_missing=False)
+auth.install_gate(app)          # open read routes; gate /run, /builder, /api/run/*
 
 UI_DIR = Path(__file__).parent.parent / "ui"
+
+
+_UNLOCK_HTML = """<!doctype html><meta charset=utf-8>
+<title>Unlock</title><meta name=viewport content="width=device-width,initial-scale=1">
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:22rem;margin:18vh auto;padding:0 1rem;color:#111}
+@media(prefers-color-scheme:dark){body{background:#0e0f12;color:#e8e8ea}}
+input{font:inherit;letter-spacing:.4em;text-align:center;width:100%;padding:.6rem;border-radius:.5rem;
+border:1px solid #888;background:transparent;color:inherit}button{font:inherit;width:100%;margin-top:.7rem;
+padding:.6rem;border:0;border-radius:.5rem;background:#2f6df6;color:#fff;cursor:pointer}
+.msg{color:#c0392b;min-height:1.2em;margin-top:.5rem;font-size:.9em}h1{font-size:1.1rem}</style>
+<h1>Owner area</h1><p>Enter your 6-digit Authenticator code.</p>
+<input id=c inputmode=numeric autocomplete=one-time-code maxlength=6 placeholder="000000" autofocus>
+<button id=b>Unlock</button><div class=msg id=m></div>
+<script>
+const q=new URLSearchParams(location.search),nx=q.get('next')||'/run';
+async function go(){const c=document.getElementById('c').value.trim();
+const r=await fetch('/api/unlock',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code:c})});
+if(r.ok){location.href=nx}else{document.getElementById('m').textContent=(await r.json().catch(()=>({}))).detail||'invalid code'}}
+document.getElementById('b').onclick=go;
+document.getElementById('c').addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+</script>"""
+
+
+@app.route("/healthz")
+def healthz():
+    """Liveness probe (public) — checks the DB is reachable."""
+    try:
+        with engine.connect() as c:
+            c.execute(text("SELECT 1"))
+        return jsonify(ok=True)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)[:120]), 503
+
+
+@app.route("/unlock")
+def unlock_page():
+    return Response(_UNLOCK_HTML, mimetype="text/html")
+
+
+@app.route("/api/unlock", methods=["POST"])
+def api_unlock():
+    if not auth._totp_secret():
+        return jsonify(detail="gate disabled"), 503
+    code = (request.get_json(silent=True) or {}).get("code")
+    if not auth.verify_totp(code):
+        return jsonify(detail="invalid code"), 401
+    exp = int(__import__("time").time()) + auth.SESSION_TTL
+    resp = jsonify(ok=True)
+    resp.set_cookie(auth.COOKIE, auth.sign(exp), **auth.cookie_kwargs())
+    return resp
 
 
 # Abbreviations expanded so "principal sw engineer" == "principal software

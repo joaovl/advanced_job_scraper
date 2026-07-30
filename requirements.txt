@@ -17,4 +17,5 @@ watchdog>=2.1.0      # For watch_exports.py
 Flask>=3.0
 SQLAlchemy>=2.0
 psycopg2-binary>=2.9
+gunicorn>=21.0       # production WSGI server (container)
 pytest>=8.0

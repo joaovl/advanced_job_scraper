@@ -1,0 +1,15 @@
+.git
+__pycache__
+*.pyc
+.pytest_cache
+output/
+tmpclaude-*
+node_modules
+*.tar.gz
+.venv
+venv
+Google_workday_scrapper/
+N8n/
+scrap_with_batch/
+scrap_with_batch/*.json
+tests/
