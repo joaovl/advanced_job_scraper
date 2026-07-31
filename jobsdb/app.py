@@ -15,6 +15,7 @@ Run:
 import csv
 import io
 import re
+import time
 from pathlib import Path
 from flask import Flask, request, jsonify, Response, render_template, send_file
 from sqlalchemy import text
@@ -28,6 +29,34 @@ engine = get_engine(create_db_if_missing=False)
 auth.install_gate(app)          # open read routes; gate /run, /builder, /api/run/*
 
 UI_DIR = Path(__file__).parent.parent / "ui"
+
+
+def _ensure_favourites():
+    """Create the favourites table if it isn't there (the deployed DB predates it)."""
+    try:
+        with engine.begin() as c:
+            c.execute(text(
+                "CREATE TABLE IF NOT EXISTS favourites ("
+                " job_id INTEGER PRIMARY KEY,"
+                " labels TEXT DEFAULT '',"
+                " note TEXT DEFAULT '',"
+                " created_at TIMESTAMPTZ DEFAULT now())"))
+    except Exception as e:
+        app.logger.warning("favourites table init skipped: %s", e)
+
+
+_ensure_favourites()
+
+
+def _fav_ok():
+    return auth.valid_fav(request.cookies.get(auth.FAV_COOKIE))
+
+
+def _need_fav():
+    """Return a 401 response if the favourites PIN session is missing/invalid."""
+    if not _fav_ok():
+        return jsonify(detail="favourites locked"), 401
+    return None
 
 
 _UNLOCK_HTML = """<!doctype html><meta charset=utf-8>
@@ -74,10 +103,95 @@ def api_unlock():
     code = (request.get_json(silent=True) or {}).get("code")
     if not auth.verify_totp(code):
         return jsonify(detail="invalid code"), 401
-    exp = int(__import__("time").time()) + auth.SESSION_TTL
+    exp = int(time.time()) + auth.SESSION_TTL
     resp = jsonify(ok=True)
     resp.set_cookie(auth.COOKIE, auth.sign(exp), **auth.cookie_kwargs())
     return resp
+
+
+# ---------------- Favourites (PIN-gated personal shortlist) ----------------
+@app.route("/favourites")
+def favourites_page():
+    return render_template("favourites.html")
+
+
+@app.route("/api/fav/unlock", methods=["POST"])
+def fav_unlock():
+    pin = (request.get_json(silent=True) or {}).get("pin")
+    if not auth.verify_pin(pin):
+        return jsonify(detail="invalid pin"), 401
+    exp = int(time.time()) + auth.FAV_TTL
+    resp = jsonify(ok=True)
+    resp.set_cookie(auth.FAV_COOKIE, auth.sign_fav(exp), **auth.fav_cookie_kwargs())
+    return resp
+
+
+@app.route("/api/fav/state")
+def fav_state():
+    return jsonify(unlocked=_fav_ok())
+
+
+@app.route("/api/fav/ids")
+def fav_ids():
+    if not _fav_ok():
+        return jsonify(ids=[])          # locked -> no stars shown, but no error noise
+    with engine.connect() as c:
+        ids = [r[0] for r in c.execute(text("SELECT job_id FROM favourites"))]
+    return jsonify(ids=ids)
+
+
+@app.route("/api/favs")
+def favs_list():
+    g = _need_fav()
+    if g:
+        return g
+    label = (request.args.get("label") or "").strip()
+    with engine.connect() as c:
+        rows = c.execute(text(
+            "SELECT f.job_id, f.labels, f.note, f.created_at, "
+            "j.company, j.title, j.location, j.url, j.source, j.is_competitor, "
+            "j.salary_min, j.salary_max, j.salary_currency, j.salary_period, j.job_country "
+            "FROM favourites f JOIN jobs j ON j.id = f.job_id "
+            "ORDER BY f.created_at DESC")).mappings().all()
+    favs = []
+    for r in rows:
+        d = dict(r)
+        d["created_at"] = str(d["created_at"])
+        d["labels_list"] = [x.strip() for x in (d["labels"] or "").split(",") if x.strip()]
+        favs.append(d)
+    labels = sorted({l for r in favs for l in r["labels_list"]}, key=str.lower)
+    if label:
+        favs = [r for r in favs if label.lower() in [l.lower() for l in r["labels_list"]]]
+    return jsonify(favs=favs, labels=labels, total=len(favs))
+
+
+@app.route("/api/fav", methods=["POST"])
+def fav_add():
+    g = _need_fav()
+    if g:
+        return g
+    d = request.get_json(silent=True) or {}
+    job_id = d.get("job_id")
+    if not job_id:
+        return jsonify(detail="job_id required"), 400
+    labels = (d.get("labels") or "").strip()
+    note = (d.get("note") or "").strip()
+    with engine.begin() as c:
+        c.execute(text(
+            "INSERT INTO favourites (job_id, labels, note) VALUES (:i, :l, :n) "
+            "ON CONFLICT (job_id) DO UPDATE SET labels = :l, note = :n"),
+            {"i": int(job_id), "l": labels, "n": note})
+    return jsonify(ok=True)
+
+
+@app.route("/api/fav/<int:job_id>", methods=["DELETE"])
+def fav_del(job_id):
+    g = _need_fav()
+    if g:
+        return g
+    with engine.begin() as c:
+        c.execute(text("DELETE FROM favourites WHERE job_id = :i"), {"i": job_id})
+    return jsonify(ok=True)
 
 
 # Abbreviations expanded so "principal sw engineer" == "principal software

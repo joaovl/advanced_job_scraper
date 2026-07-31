@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Favourites</title>
+<style>
+ :root{--bg:#0e1219;--panel:#161c26;--ink:#e8ecf3;--soft:#9aa5b6;--line:#26303e;
+  --accent:#e6953f;--teal:#4fb3bf;--new:#3ecf8e;--warn:#e6953f;--chipbg:#1d2530}
+ *{box-sizing:border-box}
+ body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.55 "Segoe UI",system-ui,sans-serif}
+ header{padding:14px 22px;border-bottom:1px solid var(--line);border-top:3px solid var(--accent);
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--panel)}
+ header h1{font-size:18px;margin:0}
+ nav{display:flex;gap:6px}
+ nav a{color:var(--soft);text-decoration:none;font-size:13px;padding:6px 11px;border-radius:8px}
+ nav a.on{color:var(--teal);background:#1b2330}
+ main{padding:18px 22px;max-width:1000px;margin:0 auto}
+ /* lock screen */
+ .lock{max-width:20rem;margin:14vh auto;text-align:center}
+ .lock input{font:20px/1 inherit;letter-spacing:.5em;text-align:center;width:100%;padding:.7rem;
+  border-radius:.6rem;border:1px solid var(--line);background:var(--chipbg);color:var(--ink)}
+ .lock button{font:inherit;width:100%;margin-top:.7rem;padding:.7rem;border:0;border-radius:.6rem;
+  background:var(--teal);color:#04202a;font-weight:600;cursor:pointer}
+ .lock .msg{color:#ff8f8f;min-height:1.2em;margin-top:.5rem;font-size:.9em}
+ .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+ .chip{border:1px solid var(--line);background:var(--chipbg);color:var(--soft);padding:6px 12px;
+  border-radius:20px;cursor:pointer;font-size:12.5px;user-select:none}
+ .chip.on{background:var(--teal);color:#04202a;border-color:var(--teal);font-weight:600}
+ .count{color:var(--soft);font-size:13px;margin-left:auto}
+ .job{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-bottom:10px;overflow:hidden}
+ .job .row{display:flex;gap:12px;align-items:baseline;padding:12px 14px}
+ .job .t{font-weight:600;font-size:15px;cursor:pointer}
+ .job .co-name{color:var(--teal);font-size:12.5px}
+ .job .meta{color:var(--soft);font-size:12.5px;margin-left:auto;white-space:nowrap;text-align:right}
+ .badge{font-size:10.5px;padding:2px 7px;border-radius:10px;font-weight:700;text-transform:uppercase}
+ .badge.comp{background:var(--warn);color:#2a1705}
+ .badge.pay{background:#20372a;color:#8fe0b0;text-transform:none;font-weight:600}
+ .badge.src{background:var(--chipbg);color:var(--soft);border:1px solid var(--line);font-weight:500;text-transform:none}
+ .lblrow{display:flex;gap:8px;align-items:center;padding:0 14px 12px;flex-wrap:wrap}
+ .lbl{background:#20303a;color:var(--teal);border:1px solid #2c4a52;border-radius:14px;
+  padding:2px 9px;font-size:11.5px}
+ .lblrow input{flex:1;min-width:160px;background:var(--chipbg);border:1px solid var(--line);
+  color:var(--ink);padding:6px 9px;border-radius:7px;font-size:12.5px}
+ .lblrow .save{background:var(--chipbg);border:1px solid var(--line);color:var(--ink);border-radius:7px;
+  padding:6px 10px;cursor:pointer;font-size:12px}
+ .lblrow .save:hover{border-color:var(--teal)}
+ .rm{margin-left:auto;color:#ff8f8f;background:none;border:1px solid #5a2f38;border-radius:7px;
+  padding:6px 10px;cursor:pointer;font-size:12px}
+ .desc{padding:0 16px 16px;border-top:1px solid var(--line);display:none;white-space:pre-wrap;
+  color:#cdd5e2;font-size:13.5px}
+ .desc.open{display:block}.desc a{color:var(--teal)}
+ .empty{color:var(--soft);text-align:center;padding:40px}
+ .quick{font-size:11.5px;color:var(--soft)}
+</style>
+</head>
+<body>
+<header>
+ <h1>★ Favourites</h1>
+ <nav>
+  <a href="/">Home</a><a href="/library">Library</a><a href="/salaries">Salaries</a>
+  <a href="/favourites" class="on">Favourites</a>
+ </nav>
+ <span class="count" id="count"></span>
+</header>
+<main id="main"><div class="empty">Loading…</div></main>
+<script>
+const $=s=>document.querySelector(s);
+let FAVS=[], LABELS=[], filter="";
+
+function money(cur,n){const S={GBP:"£",USD:"$",EUR:"€"}[cur]||"";return n>=1000?S+Math.round(n/1000)+"k":S+n;}
+function payBadge(r){ if(r.salary_max==null&&r.salary_min==null)return"";
+ const cur=r.salary_currency||"",per=r.salary_period==="hour"?"/hr":"";
+ const t=(r.salary_min&&r.salary_max&&r.salary_min!==r.salary_max)
+  ?money(cur,r.salary_min)+"–"+money(cur,r.salary_max):money(cur,r.salary_max||r.salary_min);
+ return `<span class="badge pay">${t}${per}</span>`; }
+function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function renderDesc(raw){ if(!raw)return"(no description stored)";
+ const dec=s=>{const t=document.createElement("textarea");t.innerHTML=s;return t.value;};
+ let t=dec(raw);
+ t=t.replace(/<\s*(br|hr)\s*\/?>/gi,"\n").replace(/<\/\s*(p|div|h[1-6]|tr|ul|ol|section)\s*>/gi,"\n\n")
+    .replace(/<\s*li[^>]*>/gi,"\n• ").replace(/<[^>]+>/g,"");
+ t=dec(t); return t.replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").replace(/[ \t]{2,}/g," ").trim(); }
+
+async function start(){
+ const st=await (await fetch("/api/fav/state")).json();
+ if(st.unlocked) loadFavs(); else showLock();
+}
+function showLock(msg){
+ $("#main").innerHTML=`<div class="lock"><h2 style="font-size:16px">Enter PIN</h2>
+  <input id="pin" inputmode="numeric" maxlength="6" placeholder="••••••" autofocus>
+  <button id="go">Unlock favourites</button><div class="msg" id="m">${msg||""}</div></div>`;
+ const go=async()=>{ const pin=$("#pin").value.trim();
+  const r=await fetch("/api/fav/unlock",{method:"POST",headers:{"content-type":"application/json"},
+   body:JSON.stringify({pin})});
+  if(r.ok) loadFavs(); else $("#m").textContent=(await r.json().catch(()=>({}))).detail||"invalid PIN"; };
+ $("#go").onclick=go; $("#pin").addEventListener("keydown",e=>{if(e.key==="Enter")go();});
+}
+async function loadFavs(){
+ const r=await fetch("/api/favs"+(filter?"?label="+encodeURIComponent(filter):""));
+ if(r.status===401){ showLock(); return; }
+ const d=await r.json(); FAVS=d.favs; LABELS=d.labels; render(d.total);
+}
+function render(total){
+ $("#count").textContent=`${total} saved`;
+ const chips=[`<span class="chip ${filter===""?"on":""}" data-l="">All</span>`]
+  .concat(LABELS.map(l=>`<span class="chip ${filter===l?"on":""}" data-l="${esc(l)}">${esc(l)}</span>`)).join("");
+ const items = FAVS.length ? FAVS.map(r=>`
+  <div class="job" data-id="${r.job_id}">
+   <div class="row">
+    ${r.is_competitor?'<span class="badge comp">RIVAL</span>':''}
+    <span class="badge src">${esc(r.source)}</span> ${payBadge(r)}
+    <div><div class="t">${esc(r.title)}</div>
+     <div class="co-name">${esc(r.company)}</div></div>
+    <span class="meta">${esc(r.location||"")}</span>
+   </div>
+   <div class="lblrow">
+    ${(r.labels_list||[]).map(l=>`<span class="lbl">${esc(l)}</span>`).join("")}
+    <input class="lblin" value="${esc(r.labels||"")}" placeholder="labels, comma-separated (e.g. personal, company)">
+    <button class="save">Save labels</button>
+    <button class="rm">Remove</button>
+   </div>
+   <div class="desc" id="d${r.job_id}"></div>
+  </div>`).join("") : '<div class="empty">No favourites yet. Star roles in the Library to save them here.</div>';
+ $("#main").innerHTML=`<div class="bar">${chips}<span class="quick">·  type any label to organise; “personal” vs “company” etc.</span></div>${items}`;
+ document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{filter=c.dataset.l;loadFavs();});
+ document.querySelectorAll(".job").forEach(j=>{
+  const id=j.dataset.id;
+  j.querySelector(".t").onclick=()=>toggleDesc(id);
+  j.querySelector(".save").onclick=()=>saveLabels(id,j.querySelector(".lblin").value);
+  j.querySelector(".rm").onclick=()=>removeFav(id);
+ });
+}
+async function toggleDesc(id){
+ const box=$("#d"+id); if(box.classList.contains("open")){box.classList.remove("open");return;}
+ if(!box.dataset.loaded){ const j=await (await fetch("/api/job/"+id)).json();
+  box.textContent=""; const b=document.createElement("div"); b.textContent=renderDesc(j.description); box.appendChild(b);
+  if(j.url){const a=document.createElement("a");a.href=j.url;a.target="_blank";a.rel="noopener";
+   a.textContent="Open original posting ↗";a.style.cssText="display:inline-block;margin-top:12px;font-weight:600";box.appendChild(a);}
+  box.dataset.loaded="1"; }
+ box.classList.add("open");
+}
+async function saveLabels(id,labels){
+ await fetch("/api/fav",{method:"POST",headers:{"content-type":"application/json"},
+  body:JSON.stringify({job_id:Number(id),labels})}); loadFavs();
+}
+async function removeFav(id){
+ await fetch("/api/fav/"+id,{method:"DELETE"}); loadFavs();
+}
+start();
+</script>
+</body>
+</html>

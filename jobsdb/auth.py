@@ -29,6 +29,48 @@ from flask import request, redirect, Response, jsonify
 COOKIE = "m_session"
 SESSION_TTL = 12 * 3600
 
+# --- Favourites area: a lighter PIN gate, independent of the owner TOTP gate ---
+FAV_COOKIE = "fav_session"
+FAV_TTL = 30 * 24 * 3600          # 30 days — it only guards a personal shortlist
+
+
+def fav_pin():
+    return os.environ.get("FAV_PIN", "125433").strip()
+
+
+def _fav_key():
+    return ("fav-session:" + fav_pin()).encode()
+
+
+def verify_pin(pin):
+    if not pin:
+        return False
+    return hmac.compare_digest(str(pin).strip(), fav_pin())
+
+
+def sign_fav(exp):
+    sig = hmac.new(_fav_key(), str(exp).encode(), hashlib.sha256).hexdigest()
+    return f"{exp}.{sig}"
+
+
+def valid_fav(cookie):
+    if not cookie or "." not in cookie:
+        return False
+    exp_str, _, sig = cookie.partition(".")
+    expected = hmac.new(_fav_key(), exp_str.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        return False
+    try:
+        return int(exp_str) > int(time.time())
+    except ValueError:
+        return False
+
+
+def fav_cookie_kwargs():
+    kw = cookie_kwargs()
+    kw["max_age"] = FAV_TTL
+    return kw
+
 # Routes reachable with no session. Everything else is default-deny.
 PUBLIC_PAGES = {"/", "/library", "/salaries", "/dashboard", "/unlock", "/healthz"}
 PUBLIC_GET_APIS = {
@@ -101,6 +143,10 @@ def cookie_kwargs():
 
 
 def _is_public(path, method):
+    # The favourites area has its OWN PIN gate (enforced per-route), so it must
+    # bypass the owner TOTP gate — otherwise it'd need both.
+    if path == "/favourites" or path.startswith("/api/fav"):
+        return True
     if method == "GET" and (path in PUBLIC_PAGES or path in PUBLIC_GET_APIS
                             or path.startswith(PUBLIC_PREFIXES)):
         return True
