@@ -179,6 +179,35 @@ def test_jobs_multi_company_filter(client):
     assert d["total"] == counts[cos[0]] + counts[cos[1]]         # union of both
 
 
+def test_title_include_exclude_partition(client):
+    import re as _re
+    import collections
+    rows = client.get("/api/jobs?limit=500").get_json()["rows"]
+    words = collections.Counter()
+    for r in rows:
+        for w in _re.findall(r"[a-z][a-z+#]{2,}", (r["title"] or "").lower()):
+            words[w] += 1
+    common = [w for w, c in words.most_common() if 1 <= c < len(rows)]
+    if not common:
+        return
+    word = common[0]
+    pat = r"(^|[^a-z0-9])" + _re.escape(word) + r"([^a-z0-9]|$)"
+    inc = client.get("/api/jobs?title_inc=" + word).get_json()
+    exc = client.get("/api/jobs?title_exc=" + word).get_json()
+    assert all(_re.search(pat, r["title"].lower()) for r in inc["rows"])       # include: all contain it
+    assert not any(_re.search(pat, r["title"].lower()) for r in exc["rows"])    # exclude: none contain it
+    assert inc["total"] + exc["total"] == len(rows)                            # they partition the set
+
+
+def test_wordish_excludes_substring_not_word(client):
+    # 'ada' must not match 'Canada'-style substrings — word-boundaried.
+    from jobsdb.app import _wordish
+    import re as _re
+    assert _re.search(_wordish("ada"), "senior ada developer")
+    assert not _re.search(_wordish("ada"), "engineer in canada")
+    assert _re.search(_wordish("c++"), "strong c++ and rust")
+
+
 def test_run_routes_gated_without_cookie(client):
     assert client.post("/api/run/refresh").status_code == 401     # gated api
     assert client.get("/run").status_code == 302                  # gated page -> /unlock

@@ -117,6 +117,34 @@ def build_tsquery(q):
     return " & ".join(toks) if toks else None
 
 
+def _terms(raw):
+    """Split a comma-separated include/exclude field into trimmed terms
+    (phrases allowed, e.g. 'machine learning')."""
+    return [t.strip() for t in (raw or "").split(",") if t.strip()]
+
+
+def _wordish(term):
+    """A word-boundaried, regex-escaped pattern so 'ada' matches the token ADA
+    but not 'Canada', while 'C++'/'C#' still match literally."""
+    return r"(^|[^a-z0-9])" + re.escape(term) + r"([^a-z0-9]|$)"
+
+
+def _term_filters(field, prefix, args, clauses, params):
+    """Add include (match ANY of) and exclude (drop if ANY of) filters for one column."""
+    inc = _terms(args.get(f"{prefix}_inc"))
+    if inc:
+        ors = []
+        for i, t in enumerate(inc):
+            k = f"{prefix}inc{i}"
+            params[k] = _wordish(t)
+            ors.append(f"{field} ~* :{k}")
+        clauses.append("(" + " OR ".join(ors) + ")")
+    for i, t in enumerate(_terms(args.get(f"{prefix}_exc"))):
+        k = f"{prefix}exc{i}"
+        params[k] = _wordish(t)
+        clauses.append(f"{field} !~* :{k}")
+
+
 def _where(args):
     """Build a WHERE clause + params from query args."""
     clauses, params = [], {}
@@ -148,6 +176,10 @@ def _where(args):
             params[k] = co
             keys.append(f":{k}")
         clauses.append(f"company IN ({', '.join(keys)})")
+    # Title vs body include/exclude, e.g. title_inc=software, title_exc=manager,sales,
+    # body_inc=C++,FPGA, body_exc=ada,fortran. Word-boundaried so 'ada' != 'Canada'.
+    _term_filters("title", "title", args, clauses, params)
+    _term_filters("description", "body", args, clauses, params)
     if args.get("country"):
         clauses.append("job_country = :country")
         params["country"] = args["country"]
