@@ -102,12 +102,14 @@
 </header>
 <div class="actions"> <button class="btn" id="btn-refresh">Refresh jobs</button> <button class="btn" id="btn-ai">AI score</button> <select id="ai-backend" title="AI backend"> <option value="claude">Claude (haiku)</option> <option value="ollama">Ollama (local)</option> </select> <label style="font-size:12px;color:var(--soft)"><input type="checkbox" id="ai-comp"> competitors only</label> <div class="prog" id="prog"><i id="progbar"></i></div> <span class="pmsg" id="pmsg"></span>
 </div>
-<div class="layout"> <aside> <div class="cohead"><h3>Companies</h3><span><a class="colink" id="co-all">All</a><a class="colink" id="co-none">None</a></span></div> <input class="cofilter" id="cofilter" type="search" placeholder="filter companies…"> <div class="cosel" id="cosel">All companies</div> <div id="companies"></div> </aside> <main> <div class="controls"> <input id="q" type="search" placeholder="Search title, company, description…"> <span class="chip comp" data-f="competitor">Competitors</span> <span class="chip new" data-f="new">New</span> <span class="chip" data-f="scored">Scored</span> <select id="country" title="Country"><option value="">All countries</option></select> <select id="minscore" title="Minimum AI score"> <option value="">Any score</option> <option value="9">≥ 9</option><option value="8">≥ 8</option> <option value="7">≥ 7</option><option value="6">≥ 6</option> </select> <span class="chip" id="sortscore">Sort by score</span> <span class="chip" id="sortpay">Sort by pay</span> <label class="chip" style="cursor:default"><input type="checkbox" id="haspay" style="margin-right:5px">Has pay</label> <button class="exp" id="export">Export CSV</button> </div> <details class="advf" id="advf"><summary>＋ Include / exclude terms (title vs description)</summary><div class="advgrid"> <label>Title includes (any)<input id="ti" placeholder="software, engineer"></label> <label>Title excludes<input id="tx" class="exc" placeholder="manager, sales, director"></label> <label>Description includes (any)<input id="bi" placeholder="C++, FPGA, embedded"></label> <label>Description excludes<input id="bx" class="exc" placeholder="ada, fortran"></label> <div class="advhint">Comma-separated. Includes match if ANY term is present; excludes drop a role if ANY term is present. Whole-word match, so “ada” won’t hit “Canada”.</div> </div></details> <div class="count" id="count"></div> <div id="results"><div class="loading">Loading…</div></div> </main>
+<div class="layout"> <aside> <div class="cohead"><h3>Companies</h3><span><a class="colink" id="co-all">All</a><a class="colink" id="co-none">None</a></span></div> <input class="cofilter" id="cofilter" type="search" placeholder="filter companies…"> <div class="cosel" id="cosel">All companies</div> <div id="companies"></div> </aside> <main> <div class="controls"> <input id="q" type="search" placeholder="Search title, company, description…"> <span class="chip" id="aero" title="Roles mentioning aviation/aerospace/defence terms">✈ Aerospace</span> <span class="chip comp" data-f="competitor">Competitors</span> <span class="chip new" data-f="new">New</span> <span class="chip" data-f="scored">Scored</span> <select id="country" title="Country"><option value="">All countries</option></select> <select id="minscore" title="Minimum AI score"> <option value="">Any score</option> <option value="9">≥ 9</option><option value="8">≥ 8</option> <option value="7">≥ 7</option><option value="6">≥ 6</option> </select> <span class="chip" id="sortscore">Sort by score</span> <span class="chip" id="sortpay">Sort by pay</span> <label class="chip" style="cursor:default"><input type="checkbox" id="haspay" style="margin-right:5px">Has pay</label> <button class="exp" id="export">Export CSV</button> </div> <details class="advf" id="advf"><summary>＋ Include / exclude terms (title vs description)</summary><div class="advgrid"> <label>Title includes (any)<input id="ti" placeholder="software, engineer"></label> <label>Title excludes<input id="tx" class="exc" placeholder="manager, sales, director"></label> <label>Description includes (any)<input id="bi" placeholder="C++, FPGA, embedded"></label> <label>Description excludes<input id="bx" class="exc" placeholder="ada, fortran"></label> <div class="advhint">Comma-separated. Includes match if ANY term is present; excludes drop a role if ANY term is present. Whole-word match, so “ada” won’t hit “Canada”.</div> </div></details> <div class="count" id="count"></div> <div id="results"><div class="loading">Loading…</div></div> </main>
 </div>
 <script>
 const state = {q:"", companies:new Set(), country:"", competitor:false, new:false, scored:false,
- has_pay:false, min_score:"", sort:"", status:"open",
+ has_pay:false, min_salary:"", min_score:"", sort:"", status:"open",
  title_inc:"", title_exc:"", body_inc:"", body_exc:""};
+const AEROSPACE = "aerospace,aviation,avionics,aircraft,flight,spacecraft,satellite,defence,defense,"+
+ "DO-178,DO-254,ARINC,propulsion,radar,UAV,drone,missile,HAPS,GNC,autopilot,rotorcraft";
 let ALL_COMPANIES = [];
 let FAV_IDS = new Set();
 const $ = s => document.querySelector(s);
@@ -139,6 +141,7 @@ function qs(){
  if(state.q) p.set("q", state.q);
  state.companies.forEach(co => p.append("company", co));   // empty set = all companies
  if(state.country) p.set("country", state.country);
+ if(state.min_salary) p.set("min_salary", state.min_salary);
  ["title_inc","title_exc","body_inc","body_exc"].forEach(k=>{ if(state[k]) p.set(k, state[k]); });
  if(state.competitor) p.set("competitor","1");
  if(state.new) p.set("new","1");
@@ -315,7 +318,49 @@ $("#country").onchange = e=>{ state.country = e.target.value; load(); };
  tmr=setTimeout(load,320); };
 });
 
-loadFavIds().then(()=>{ loadStats(); load(); });
+// Aerospace quick filter: toggles the aerospace term set into the description filter.
+$("#aero").onclick = ()=>{
+ const on = state.body_inc === AEROSPACE;
+ state.body_inc = on ? "" : AEROSPACE;
+ $("#bi").value = state.body_inc;
+ $("#aero").classList.toggle("on", !on);
+ if(!on) $("#advf").open = true;
+ load();
+};
+
+// Initialise filters from the URL (drill-down links from the Salaries page).
+function applyUrl(){
+ const p = new URLSearchParams(location.search);
+ if(p.get("q")) state.q = p.get("q");
+ p.getAll("company").forEach(c=> state.companies.add(c));
+ if(p.get("country")) state.country = p.get("country");
+ if(p.get("has_salary")==="1") state.has_pay = true;
+ if(p.get("min_salary")) state.min_salary = p.get("min_salary");
+ if(p.get("competitor")==="1") state.competitor = true;
+ if(p.get("new")==="1") state.new = true;
+ if(p.get("scored")==="1") state.scored = true;
+ if(p.get("min_score")) state.min_score = p.get("min_score");
+ if(p.get("sort")) state.sort = p.get("sort");
+ ["title_inc","title_exc","body_inc","body_exc"].forEach(k=>{ if(p.get(k)) state[k]=p.get(k); });
+}
+function reflect(){
+ $("#q").value = state.q||"";
+ if(state.country) $("#country").value = state.country;
+ $("#haspay").checked = !!state.has_pay;
+ if(state.min_score) $("#minscore").value = state.min_score;
+ $("#ti").value=state.title_inc||""; $("#tx").value=state.title_exc||"";
+ $("#bi").value=state.body_inc||""; $("#bx").value=state.body_exc||"";
+ if(state.title_inc||state.title_exc||state.body_inc||state.body_exc) $("#advf").open = true;
+ $("#aero").classList.toggle("on", state.body_inc===AEROSPACE);
+ document.querySelectorAll(".chip[data-f]").forEach(ch=>{ const f=ch.dataset.f;
+  if(f in state) ch.classList.toggle("on", !!state[f]); });
+ $("#sortscore").classList.toggle("on", state.sort==="score");
+ $("#sortpay").classList.toggle("on", state.sort==="salary");
+ updateCoSel();
+}
+
+applyUrl();
+loadFavIds().then(loadStats).then(()=>{ reflect(); load(); });
 </script>
 </body>
 </html>

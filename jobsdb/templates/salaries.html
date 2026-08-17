@@ -39,6 +39,13 @@
   .barrow .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--teal);font-weight:600}
   .muted{color:var(--soft);font-size:13px}
   .big{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .qchip{border:1px solid var(--line);background:var(--chip);color:var(--soft);padding:7px 13px;
+    border-radius:20px;cursor:pointer;font-size:12.5px;user-select:none}
+  .qchip.on{background:var(--teal);color:#04202a;border-color:var(--teal);font-weight:600}
+  tr.drill,.barrow.drill{cursor:pointer}
+  tr.drill:hover td{background:var(--panel2)}
+  .barrow.drill:hover .lbl{color:var(--teal)}
+  .drillnote{color:var(--soft);font-size:12px;margin:-8px 0 10px}
   .advf{margin:-6px 0 20px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
   .advf summary{cursor:pointer;padding:9px 13px;color:var(--soft);font-size:13.5px;user-select:none}
   .advf[open] summary{border-bottom:1px solid var(--line);color:var(--ink)}
@@ -71,9 +78,11 @@
     <select id="country"><option value="">All locations</option></select>
     <label class="muted" style="display:flex;align-items:center;gap:6px">min
       <input id="minsal" type="number" min="0" step="5000" placeholder="e.g. 80000" style="width:110px"></label>
+    <span class="qchip" id="aero" title="Roles mentioning aviation/aerospace/defence terms">✈ Aerospace</span>
     <label class="muted"><input type="checkbox" id="comp"> competitors only</label>
     <div class="cur" id="cur"></div>
   </div>
+  <p class="drillnote">Tip: click any row in the tables below to see the underlying jobs in the Library.</p>
 
   <details class="advf" id="advf"><summary>＋ Include / exclude terms (title vs description)</summary>
     <div class="advgrid">
@@ -117,6 +126,26 @@ function qs(){ const p=new URLSearchParams(); if(state.q)p.set("q",state.q);
   if(state.min_salary)p.set("min_salary",state.min_salary);
   ["title_inc","title_exc","body_inc","body_exc"].forEach(k=>{ if(state[k])p.set(k,state[k]); });
   return p.toString(); }
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+const AEROSPACE="aerospace,aviation,avionics,aircraft,flight,spacecraft,satellite,defence,defense,"+
+  "DO-178,DO-254,ARINC,propulsion,radar,UAV,drone,missile,HAPS,GNC,autopilot,rotorcraft";
+// How the endpoint buckets seniority (title regex) -> the equivalent Library title filter.
+const LEVEL_FILTER={
+  "Principal":{title_inc:"principal,staff"}, "Lead":{title_inc:"lead,head"},
+  "Senior":{title_inc:"senior,snr,sr"},
+  "Mid / other":{title_exc:"principal,staff,lead,head,senior,snr,sr"}};
+// Deep-link to the Library reproducing the current filters + a drill dimension.
+function libLink(extra){
+  const p=new URLSearchParams();
+  if(state.q)p.set("q",state.q);
+  if(state.comp)p.set("competitor","1");
+  if(state.country)p.set("country",state.country);
+  if(state.min_salary)p.set("min_salary",state.min_salary);
+  ["title_inc","title_exc","body_inc","body_exc"].forEach(k=>{ if(state[k])p.set(k,state[k]); });
+  p.set("has_salary","1"); p.set("sort","salary");
+  Object.entries(extra||{}).forEach(([k,v])=>{ if(v) p.set(k,v); });
+  return "/library?"+p.toString();
+}
 
 fetch("/api/stats").then(r=>r.json()).then(d=>{
   const sel=$("#country");
@@ -140,24 +169,35 @@ async function load(){
   // levels bar chart
   const max=Math.max(1,...d.by_level.map(l=>l.median||0));
   $("#levels").innerHTML=d.by_level.map(l=>`
-    <div class="barrow"><div class="lbl">${l.level} <span class="muted">(${l.n})</span></div>
+    <div class="barrow drill" data-level="${esc(l.level)}" title="See these jobs in the Library"><div class="lbl">${l.level} <span class="muted">(${l.n})</span></div>
       <div class="track"><div class="fill" style="width:${Math.round(100*(l.median||0)/max)}%"></div></div>
       <div class="val">${fmt(d.currency,l.median)}</div></div>
     <div class="muted" style="margin:-4px 0 10px 132px">p25 ${fmt(d.currency,l.p25)} · p75 ${fmt(d.currency,l.p75)}</div>`).join("")
     || '<div class="muted">–</div>';
   // locations
   $("#locations").innerHTML=(d.by_location||[]).map(l=>
-    `<tr><td>${l.country}</td><td class="num">${l.n}</td><td class="num">${fmt(d.currency,l.median)}</td>`+
+    `<tr class="drill" data-country="${esc(l.country)}" title="See these jobs"><td>${esc(l.country)}</td><td class="num">${l.n}</td><td class="num">${fmt(d.currency,l.median)}</td>`+
     `<td class="num muted">${fmt(d.currency,l.lo)}–${fmt(d.currency,l.hi)}</td></tr>`).join("")
     || '<tr><td colspan="4" class="muted">–</td></tr>';
   // companies
   $("#companies").innerHTML=d.by_company.map(c=>
-    `<tr><td>${c.company}</td><td class="num">${c.n}</td><td class="num">${fmt(d.currency,c.median)}</td></tr>`).join("")
+    `<tr class="drill" data-company="${esc(c.company)}" title="See these jobs"><td>${esc(c.company)}</td><td class="num">${c.n}</td><td class="num">${fmt(d.currency,c.median)}</td></tr>`).join("")
     || '<tr><td colspan="3" class="muted">–</td></tr>';
+  // wire drill-downs -> Library
+  document.querySelectorAll(".drill").forEach(el=>el.onclick=()=>{
+    const ds=el.dataset; let extra={};
+    if(ds.level!=null) extra=LEVEL_FILTER[ds.level]||{};
+    else if(ds.country!=null) extra={country:ds.country};
+    else if(ds.company!=null) extra={company:ds.company};
+    location.href=libLink(extra);
+  });
 }
 let t; $("#q").oninput=e=>{clearTimeout(t);state.q=e.target.value;state.currency="";t=setTimeout(load,250);};
 $("#comp").onchange=e=>{state.comp=e.target.checked;state.currency="";load();};
 $("#country").onchange=e=>{state.country=e.target.value;state.currency="";load();};
+$("#aero").onclick=()=>{ const on=state.body_inc===AEROSPACE;
+  state.body_inc=on?"":AEROSPACE; $("#bi").value=state.body_inc;
+  $("#aero").classList.toggle("on",!on); if(!on)$("#advf").open=true; state.currency=""; load(); };
 let mt; $("#minsal").oninput=e=>{clearTimeout(mt);state.min_salary=e.target.value.trim();state.currency="";mt=setTimeout(load,350);};
 [["ti","title_inc"],["tx","title_exc"],["bi","body_inc"],["bx","body_exc"]].forEach(([id,key])=>{
   let tm; $("#"+id).oninput=e=>{clearTimeout(tm);state[key]=e.target.value.trim();state.currency="";tm=setTimeout(load,350);};
