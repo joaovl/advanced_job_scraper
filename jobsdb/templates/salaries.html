@@ -39,6 +39,15 @@
   .barrow .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--teal);font-weight:600}
   .muted{color:var(--soft);font-size:13px}
   .big{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .advf{margin:-6px 0 20px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+  .advf summary{cursor:pointer;padding:9px 13px;color:var(--soft);font-size:13.5px;user-select:none}
+  .advf[open] summary{border-bottom:1px solid var(--line);color:var(--ink)}
+  .advgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:13px}
+  @media(max-width:760px){.advgrid{grid-template-columns:1fr}}
+  .advgrid label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--soft);
+    text-transform:uppercase;letter-spacing:.05em}
+  .advgrid input.exc{border-color:#5a2f38}
+  .advhint{grid-column:1/-1;color:var(--soft);font-size:11.5px;margin:-2px 0 0}
 </style>
 </head>
 <body>
@@ -48,6 +57,7 @@
   <a class="link" href="/library">Library</a>
   <a class="link" href="/run">Run Center</a>
   <a class="link active" href="/salaries">Salaries</a>
+  <a class="link" href="/favourites">★ Favourites</a>
   <a class="link" href="/dashboard?file=/api/analysis.json">Dashboard</a>
   <a class="link" href="/builder">Command Builder</a>
 </nav>
@@ -59,9 +69,22 @@
   <div class="controls">
     <input id="q" type="search" placeholder="Filter by role, e.g. principal software engineer" style="flex:1;min-width:240px">
     <select id="country"><option value="">All locations</option></select>
+    <label class="muted" style="display:flex;align-items:center;gap:6px">min
+      <input id="minsal" type="number" min="0" step="5000" placeholder="e.g. 80000" style="width:110px"></label>
     <label class="muted"><input type="checkbox" id="comp"> competitors only</label>
     <div class="cur" id="cur"></div>
   </div>
+
+  <details class="advf" id="advf"><summary>＋ Include / exclude terms (title vs description)</summary>
+    <div class="advgrid">
+      <label>Title includes (any)<input id="ti" placeholder="software, engineer"></label>
+      <label>Title excludes<input id="tx" class="exc" placeholder="manager, sales, director"></label>
+      <label>Description includes (any)<input id="bi" placeholder="C++, FPGA, embedded"></label>
+      <label>Description excludes<input id="bx" class="exc" placeholder="ada, fortran"></label>
+      <div class="advhint">Salary figures below reflect only the roles that match these filters.
+        Includes match ANY term; excludes drop a role if ANY term is present; whole-word match.</div>
+    </div>
+  </details>
 
   <div class="panel">
     <h3>Overview</h3>
@@ -84,12 +107,16 @@
 </div>
 <script>
 const $=s=>document.querySelector(s);
-const state={q:"",comp:false,currency:"",country:""};
+const state={q:"",comp:false,currency:"",country:"",min_salary:"",
+  title_inc:"",title_exc:"",body_inc:"",body_exc:""};
 const SYM={GBP:"£",USD:"$",EUR:"€"};
 function fmt(cur,n){ if(n==null) return "–"; return (SYM[cur]||"")+Math.round(n).toLocaleString(); }
 function qs(){ const p=new URLSearchParams(); if(state.q)p.set("q",state.q);
   if(state.comp)p.set("competitor","1"); if(state.currency)p.set("currency",state.currency);
-  if(state.country)p.set("country",state.country); return p.toString(); }
+  if(state.country)p.set("country",state.country);
+  if(state.min_salary)p.set("min_salary",state.min_salary);
+  ["title_inc","title_exc","body_inc","body_exc"].forEach(k=>{ if(state[k])p.set(k,state[k]); });
+  return p.toString(); }
 
 fetch("/api/stats").then(r=>r.json()).then(d=>{
   const sel=$("#country");
@@ -131,6 +158,10 @@ async function load(){
 let t; $("#q").oninput=e=>{clearTimeout(t);state.q=e.target.value;state.currency="";t=setTimeout(load,250);};
 $("#comp").onchange=e=>{state.comp=e.target.checked;state.currency="";load();};
 $("#country").onchange=e=>{state.country=e.target.value;state.currency="";load();};
+let mt; $("#minsal").oninput=e=>{clearTimeout(mt);state.min_salary=e.target.value.trim();state.currency="";mt=setTimeout(load,350);};
+[["ti","title_inc"],["tx","title_exc"],["bi","body_inc"],["bx","body_exc"]].forEach(([id,key])=>{
+  let tm; $("#"+id).oninput=e=>{clearTimeout(tm);state[key]=e.target.value.trim();state.currency="";tm=setTimeout(load,350);};
+});
 load();
 </script>
 </body>
